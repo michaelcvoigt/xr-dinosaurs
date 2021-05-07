@@ -48,7 +48,12 @@ const IDEAL_RELATIVE_BUTTON_HEIGHT = -0.6;
 const MIN_BUTTON_HEIGHT = 0.3;
 const MAX_BUTTON_HEIGHT = 1.1;
 const BUTTON_HEIGHT_DEADZONE = 0.15;
+const CAPTION_TIMEOUT_PER_CHARACTER = 100;
+const CAPTION_TIMEOUT_PER_CHARACTER_VR = 150;
+const CAPTION_VR_LABEL_SIZE = 65;
+const CAPTION_VR_LABEL_SCALE = 0.075;
 
+let caption_timeout = null;
 let preloadPromise, appRunning = false;
 let stats, controls;
 let camera, cameraGroup, scene, renderer;
@@ -73,7 +78,7 @@ let audioLoader = new THREE.AudioLoader();
 let clock = new THREE.Clock();
 
 let listener = new THREE.AudioListener();
-let ambientSounds, hornSound;
+let ambientSounds, hornSound, fileSound
 
 let locomotionManager;
 
@@ -82,626 +87,812 @@ let takeScreenshot = false;
 
 let debugEnabled = false;
 let debugSettings = {
-  drawSkybox: true,
-  drawEnvironment: true,
-  drawDinosaur: true,
-  drawShadows: true,
-  drawButtons: true,
-  animate: true,
+	drawSkybox: true,
+	drawEnvironment: true,
+	drawDinosaur: true,
+	drawShadows: true,
+	drawButtons: true,
+	animate: true,
 
-  screenshot: () => { screenshot(); },
-  scare: () => { scare(); },
-  raisePlatform: () => { environment.raisePlatform(); },
-  lowerPlatform: () => { environment.lowerPlatform(); }
+	screenshot: () => { screenshot(); },
+	scare: () => { scare(); },
+	raisePlatform: () => { environment.raisePlatform(); },
+	lowerPlatform: () => { environment.lowerPlatform(); }
 };
 
 function screenshot() {
-  if (!screenshotList) {
-    screenshotList = document.createElement('div');
-    screenshotList.classList.add('screenshot-list');
-    document.body.appendChild(screenshotList);
-  }
-  takeScreenshot = true;
+	if (!screenshotList) {
+		screenshotList = document.createElement('div');
+		screenshotList.classList.add('screenshot-list');
+		document.body.appendChild(screenshotList);
+	}
+	takeScreenshot = true;
 }
 
 function initDebugUI() {
-  let gui = new dat.GUI();
 
-  let actionFolder = gui.addFolder('Actions');
-  actionFolder.add(debugSettings, 'scare');
-  actionFolder.add(debugSettings, 'screenshot');
-  actionFolder.add(debugSettings, 'raisePlatform');
-  actionFolder.add(debugSettings, 'lowerPlatform');
+	let gui = new dat.GUI();
 
-  let guiRenderingFolder = gui.addFolder('Rendering Options');
-  guiRenderingFolder.add(debugSettings, 'drawSkybox').onFinishChange(() => {
-    if (debugSettings.drawSkybox) {
-      scene.background = xrLighting.envMap;
-    } else {
-      scene.background = null;
-    }
-  });
-  guiRenderingFolder.add(debugSettings, 'drawEnvironment').onFinishChange(() => {
-    environment.visible = debugSettings.drawEnvironment;
-  });
-  guiRenderingFolder.add(debugSettings, 'drawDinosaur').onFinishChange(() => {
-    xrDinosaur.visible = debugSettings.drawDinosaur;
-  });
-  guiRenderingFolder.add(debugSettings, 'drawShadows').onFinishChange(() => {
-    blobShadowManager.visible = debugSettings.drawShadows;
-  });
-  guiRenderingFolder.add(debugSettings, 'drawButtons').onFinishChange(() => {
-    buttonGroup.visible = debugSettings.drawButtons;
-  });
-  guiRenderingFolder.add(debugSettings, 'animate');
+	let actionFolder = gui.addFolder('Actions');
+	actionFolder.add(debugSettings, 'scare');
+	actionFolder.add(debugSettings, 'screenshot');
+	actionFolder.add(debugSettings, 'raisePlatform');
+	actionFolder.add(debugSettings, 'lowerPlatform');
 
-  document.body.appendChild(gui.domElement);
+	let guiRenderingFolder = gui.addFolder('Rendering Options');
+	guiRenderingFolder.add(debugSettings, 'drawSkybox').onFinishChange(() => {
+		if (debugSettings.drawSkybox) {
+			scene.background = xrLighting.envMap;
+		} else {
+			scene.background = null;
+		}
+	});
+	guiRenderingFolder.add(debugSettings, 'drawEnvironment').onFinishChange(() => {
+		environment.visible = debugSettings.drawEnvironment;
+	});
+	guiRenderingFolder.add(debugSettings, 'drawDinosaur').onFinishChange(() => {
+		xrDinosaur.visible = debugSettings.drawDinosaur;
+	});
+	guiRenderingFolder.add(debugSettings, 'drawShadows').onFinishChange(() => {
+		blobShadowManager.visible = debugSettings.drawShadows;
+	});
+	guiRenderingFolder.add(debugSettings, 'drawButtons').onFinishChange(() => {
+		buttonGroup.visible = debugSettings.drawButtons;
+	});
+	guiRenderingFolder.add(debugSettings, 'animate');
+
+	document.body.appendChild(gui.domElement);
 }
 
-function initControllers() {
-  if (controllers.length) {
-    return;
-  }
+function initControllers()
+{
+	if (controllers.length) {
+		return;
+	}
 
-  // VR controller trackings
-  let inputRay = new XRInputRay();
-  inputRay.scale.z = 2;
+	// VR controller trackings
+	let inputRay = new XRInputRay();
+	inputRay.scale.z = 2;
 
-  function buildController(index) {
-    let targetRay = renderer.xr.getController(index);
-    let grip = renderer.xr.getControllerGrip(index);
-    let model = xrControllerModelFactory.createControllerModel(grip);
+	function buildController(index) {
+		let targetRay = renderer.xr.getController(index);
+		let grip = renderer.xr.getControllerGrip(index);
+		let model = xrControllerModelFactory.createControllerModel(grip);
 
-    const rayMesh = inputRay.clone();
-    targetRay.add(rayMesh);
-    targetRay.rayMesh = rayMesh;
+		const rayMesh = inputRay.clone();
+		targetRay.add(rayMesh);
+		targetRay.rayMesh = rayMesh;
 
-    targetRay.addEventListener('connected', (event) => {
-      console.log(`Controller connected: ${event.data.profiles}`);
-      const xrInputSource = event.data;
-      grip.visible = xrInputSource !== 'gaze';
-      targetRay.visible = xrInputSource !== 'gaze';
-      buttonManager.addController(targetRay);
-    });
+		targetRay.addEventListener('connected', (event) => {
+			console.log(`Controller connected: ${event.data.profiles}`);
+			const xrInputSource = event.data;
+			grip.visible = xrInputSource !== 'gaze';
+			targetRay.visible = xrInputSource !== 'gaze';
+			buttonManager.addController(targetRay);
+		});
 
-    targetRay.addEventListener('disconnected', (event) => {
-      if (event.data) {
-        console.log(`Controller disconnected: ${event.data.profiles}`);
-      }
-      grip.visible = false;
-      targetRay.visible = false;
-      buttonManager.removeController(targetRay);
-    });
+		targetRay.addEventListener('disconnected', (event) => {
+			if (event.data) {
+				console.log(`Controller disconnected: ${event.data.profiles}`);
+			}
+			grip.visible = false;
+			targetRay.visible = false;
+			buttonManager.removeController(targetRay);
+		});
 
-    grip.add(model);
+		grip.add(model);
 
-    locomotionManager.watchController(targetRay);
-    locomotionManager.add(targetRay);
-    locomotionManager.add(grip);
+		locomotionManager.watchController(targetRay);
+		locomotionManager.add(targetRay);
+		locomotionManager.add(grip);
 
-    model.setEnvironmentMap(xrLighting.envMap);
+		model.setEnvironmentMap(xrLighting.envMap);
 
-    return {
-      targetRay,
-      grip,
-      model
-    };
-  }
+		return {
+			targetRay,
+			grip,
+			model
+		};
+	}
 
-  controllers.push(buildController(0), buildController(1));
+	controllers.push(buildController(0), buildController(1));
 }
 
 export function SetStateChangeCallback(callback) {
-  stateCallback = callback;
+	stateCallback = callback;
 }
 
 function OnAppStateChange(state) {
-  if (stateCallback) {
-    stateCallback(state);
-  }
+	if (stateCallback) {
+		stateCallback(state);
+	}
 }
 
 function isValidDestination(dest) {
-  // Does a really simple bounds check to ensure users can't teleport beyond the inner fence.
-  return (dest.x > -25.5 && dest.x < 26 && dest.z > -35 && dest.z < 16.5);
+	// Does a really simple bounds check to ensure users can't teleport beyond the inner fence.
+	return (dest.x > -25.5 && dest.x < 26 && dest.z > -35 && dest.z < 16.5);
 }
 
 function onStartSelectDestination(controller) {
-  controller.rayMesh.visible = false;
+	controller.rayMesh.visible = false;
 }
 
 function onEndSelectDestination(controller) {
-  controller.rayMesh.visible = true;
+	controller.rayMesh.visible = true;
 }
 
 export function PreloadDinosaurApp(debug = false) {
-  if (preloadPromise) {
-    return preloadPromise;
-  }
+	if (preloadPromise) {
+		return preloadPromise;
+	}
 
-  debugEnabled = debug;
+	debugEnabled = debug;
 
-  scene = new THREE.Scene();
+	scene = new THREE.Scene();
 
-  gltfLoader = new GLTFLoader();
-  let dracoLoader = new DRACOLoader();
-  dracoLoader.setWorkerLimit(1);
-  dracoLoader.setDecoderPath('js/third-party/three.js/examples/js/libs/draco/gltf/');
-  gltfLoader.setDRACOLoader(dracoLoader);
+	gltfLoader = new GLTFLoader();
+	let dracoLoader = new DRACOLoader();
+	dracoLoader.setWorkerLimit(1);
+	dracoLoader.setDecoderPath('js/third-party/three.js/examples/js/libs/draco/gltf/');
+	gltfLoader.setDRACOLoader(dracoLoader);
 
-  xrDinosaurLoader = new XRDinosaurLoader(gltfLoader);
-  blobShadowManager = new BlobShadowManager(textureLoader.load('media/textures/shadow.png'));
-  scene.add(blobShadowManager);
+	xrDinosaurLoader = new XRDinosaurLoader(gltfLoader);
+	blobShadowManager = new BlobShadowManager(textureLoader.load('media/textures/shadow.png'));
+	scene.add(blobShadowManager);
 
-  xrControllerModelFactory = new XRControllerModelFactory(gltfLoader);
+	xrControllerModelFactory = new XRControllerModelFactory(gltfLoader);
 
-  environment = new PenEnvironment(gltfLoader);
-  environment.loaded.then(() => {
-    //renderer.compileTarget(scene, environment, () => {
-      scene.add(environment);
-    //});
-  });
+	environment = new PenEnvironment(gltfLoader);
+	environment.loaded.then(() => {
+		//renderer.compileTarget(scene, environment, () => {
+		scene.add(environment);
+		//});
+	});
 
-  buttonManager = new XRButtonManager();
-  buttonGroup = new THREE.Group();
-  environment.platform.add(buttonGroup);
+	buttonManager = new XRButtonManager();
+	buttonGroup = new THREE.Group();
+	environment.platform.add(buttonGroup);
 
-  cursorManager = new XRInputCursorManager();
-  scene.add(cursorManager);
-  cursorManager.addCollider(buttonGroup);
+	cursorManager = new XRInputCursorManager();
+	scene.add(cursorManager);
+	cursorManager.addCollider(buttonGroup);
 
-  locomotionManager = new XRLocomotionManager({
-    targetTexture: textureLoader.load('media/textures/teleport-target.png'),
-    validDestinationCallback: isValidDestination,
-    startSelectDestinationCallback: onStartSelectDestination,
-    endSelectDestinationCallback: onEndSelectDestination,
-    navigationMeshes: environment.navigationMeshes
-  });
-  environment.platform.add(locomotionManager);
+	locomotionManager = new XRLocomotionManager({
+		targetTexture: textureLoader.load('media/textures/teleport-target.png'),
+		validDestinationCallback: isValidDestination,
+		startSelectDestinationCallback: onStartSelectDestination,
+		endSelectDestinationCallback: onEndSelectDestination,
+		navigationMeshes: environment.navigationMeshes
+	});
+	environment.platform.add(locomotionManager);
 
-  camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.25, 100);
-  camera.position.set(0, 5.0, 5.0);
-  camera.add(listener);
-  locomotionManager.add(camera);
+	camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.25, 100);
+	camera.position.set(0, 5.0, 5.0);
+	camera.add(listener);
+	locomotionManager.add(camera);
 
-  viewerProxy = new THREE.Object3D();
-  camera.add(viewerProxy);
+	viewerProxy = new THREE.Object3D();
+	camera.add(viewerProxy);
 
-  // Try to create a WebGL 2 context if we can, otherwise fall back to WebGL.
-  let canvas = document.createElement('canvas');
-  let gl = null;
-  for (let contextType of ['webgl2', 'webgl', 'experimental-webgl']) {
-    gl = canvas.getContext(contextType, { antialias: true, xrCompatible: true });
-    if (gl) break;
-  }
+	// Try to create a WebGL 2 context if we can, otherwise fall back to WebGL.
+	let canvas = document.createElement('canvas');
+	let gl = null;
+	for (let contextType of ['webgl2', 'webgl', 'experimental-webgl']) {
+		gl = canvas.getContext(contextType, { antialias: true, xrCompatible: true });
+		if (gl) break;
+	}
 
-  renderer = new THREE.WebGLRenderer({ canvas: canvas, context: gl });
-  renderer.setPixelRatio(window.devicePixelRatio);
-  renderer.setSize(window.innerWidth, window.innerHeight);
-  renderer.outputEncoding = THREE.sRGBEncoding;
-  //renderer.physicallyCorrectLights = true;
-  renderer.xr.enabled = true;
+	renderer = new THREE.WebGLRenderer({ canvas: canvas, context: gl });
+	renderer.setPixelRatio(window.devicePixelRatio);
+	renderer.setSize(window.innerWidth, window.innerHeight);
+	renderer.outputEncoding = THREE.sRGBEncoding;
+	//renderer.physicallyCorrectLights = true;
+	renderer.xr.enabled = true;
 
-  // This is useful when debugging, but can cause massive blocking operations
-  // on the main thread so turn it off for "real" work.
-  renderer.debug.checkShaderErrors = debugEnabled;
+	// This is useful when debugging, but can cause massive blocking operations
+	// on the main thread so turn it off for "real" work.
+	renderer.debug.checkShaderErrors = debugEnabled;
 
-  xrLighting = new XRLighting(renderer);
-  scene.add(xrLighting);
+	xrLighting = new XRLighting(renderer);
+	scene.add(xrLighting);
 
-  window.addEventListener('resize', onWindowResize, false);
+	window.addEventListener('resize', onWindowResize, false);
 
-  controls = new OrbitControls(camera, renderer.domElement);
-  controls.target.set(0, 1, -4);
-  if (!debugEnabled) {
-    controls.maxDistance = 30;
-    controls.maxPolarAngle = Math.PI * 0.49;
-  }
-  controls.update();
+	controls = new OrbitControls(camera, renderer.domElement);
+	controls.target.set(0, 1, -4);
+	if (!debugEnabled) {
+		controls.maxDistance = 30;
+		controls.maxPolarAngle = Math.PI * 0.49;
+	}
+	controls.update();
 
-  stats = new XRStats(renderer);
-  if (!debugEnabled) {
-    stats.drawOrthographic = false;
-  }
+	stats = new XRStats(renderer);
+	if (!debugEnabled) {
+		stats.drawOrthographic = false;
+	}
 
-  renderer.xr.addEventListener('sessionstart', async () => {
-    initControllers();
+	renderer.xr.addEventListener('sessionstart', async () => {
+		initControllers();
 
-    if (!debugEnabled) {
-      buttonGroup.visible = true;
-    }
+		if (!debugEnabled) {
+			buttonGroup.visible = true;
+		}
 
-    if (stats) {
-      stats.drawOrthographic = false;
-      stats.scale.set(0.1, 0.1, 0.1);
-      stats.position.set(0, -0.07, 0);
-      stats.rotation.set(Math.PI * -0.5, Math.PI, 0);
-      scene.remove(stats);
-      controllers[0].grip.add(stats);
-    }
+		if (stats) {
+			stats.drawOrthographic = false;
+			stats.scale.set(0.1, 0.1, 0.1);
+			stats.position.set(0, -0.07, 0);
+			stats.rotation.set(Math.PI * -0.5, Math.PI, 0);
+			scene.remove(stats);
+			controllers[0].grip.add(stats);
+		}
 
-    if (xrMode == 'immersive-ar') {
-      // Stop rendering the environment in AR mode
-      scene.background = null;
-      environment.visible = false;
-      buttonGroup.visible = false;
-      blobShadowManager.arMode = true;
+		if (xrMode == 'immersive-ar') {
+			// Stop rendering the environment in AR mode
+			scene.background = null;
+			environment.visible = false;
+			buttonGroup.visible = false;
+			blobShadowManager.arMode = true;
 
-      // Lighting estimation experiement
-      xrLighting.xrSession = xrSession;
+			// Lighting estimation experiement
+			xrLighting.xrSession = xrSession;
 
-      if ('requestHitTestSource' in xrSession) {
-        placementMode = true;
-        buttonManager.active = false;
+			if ('requestHitTestSource' in xrSession) {
+				placementMode = true;
+				buttonManager.active = false;
 
-        xrSession.addEventListener('select', () => {
-          if (xrDinosaur) {
-            placementMode = false;
-            xrDinosaur.visible = true;
-            blobShadowManager.visible = true;
-          }
-        });
+				xrSession.addEventListener('select', () => {
+					if (xrDinosaur) {
+						placementMode = false;
+						xrDinosaur.visible = true;
+						blobShadowManager.visible = true;
+					}
+				});
 
-        let viewerSpace = await xrSession.requestReferenceSpace('viewer');
-        hitTestSource = await xrSession.requestHitTestSource({ space: viewerSpace });
-      }
-    } else {
-      buttonManager.active = true;
+				let viewerSpace = await xrSession.requestReferenceSpace('viewer');
+				hitTestSource = await xrSession.requestHitTestSource({ space: viewerSpace });
+			}
+		} else {
+			buttonManager.active = true;
 
-      // Load and play ambient jungle sounds once the user enters VR.
-      if (!ambientSounds) {
-        ambientSounds = new THREE.Audio(listener);
-        audioLoader.load('media/sounds/jungle-ambient.mp3', (buffer) => {
-          ambientSounds.setBuffer(buffer);
-          ambientSounds.setLoop(true);
-          ambientSounds.setVolume(0.5);
-          ambientSounds.play();
-        });
-      } else {
-        ambientSounds.play();
-      }
-    }
+ 			fartAudio = new Audio('media/sounds/RobotFart');
 
-    OnAppStateChange({ xrSessionStarted: true });
-  });
+			// Load and play ambient jungle sounds once the user enters VR.
+			if (!ambientSounds) {
+				ambientSounds = new THREE.Audio(listener);
+				audioLoader.load('media/sounds/jungle-ambient.mp3', (buffer) => {
+					ambientSounds.setBuffer(buffer);
+					ambientSounds.setLoop(true);
+					ambientSounds.setVolume(0.5);
+					ambientSounds.play();
+				});
+			} else {
+				ambientSounds.play();
+			}
+		}
 
-  renderer.xr.addEventListener('sessionend', () => {
-    xrSession = null;
-    xrMode = null;
-    hitTestSource = null;
-    placementMode = false;
+		OnAppStateChange({ xrSessionStarted: true });
+	});
 
-    xrLighting.xrSession = null;
+	renderer.xr.addEventListener('sessionend', () => {
+		xrSession = null;
+		xrMode = null;
+		hitTestSource = null;
+		placementMode = false;
 
-    if (xrDinosaur) {
-      xrDinosaur.visible = true;
-    }
-    blobShadowManager.visible = true;
-    blobShadowManager.arMode = false;
+		xrLighting.xrSession = null;
 
-    // Stop ambient jungle sounds once the user exits VR.
-    if (ambientSounds) {
-      ambientSounds.stop();
-    }
+		if (xrDinosaur) {
+			xrDinosaur.visible = true;
+		}
+		blobShadowManager.visible = true;
+		blobShadowManager.arMode = false;
 
-    if (!debugEnabled) {
-      buttonGroup.visible = false;
-    }
-    environment.resetPlatform();
+		// Stop ambient jungle sounds once the user exits VR.
+		if (ambientSounds) {
+			ambientSounds.stop();
+		}
 
-    if (stats && debugEnabled) {
-      stats.drawOrthographic = true;
-    }
+		if (!debugEnabled) {
+			buttonGroup.visible = false;
+		}
+		environment.resetPlatform();
 
-    environment.visible = debugSettings.drawEnvironment;
-    buttonGroup.visible = debugSettings.drawButtons;
+		if (stats && debugEnabled) {
+			stats.drawOrthographic = true;
+		}
 
-    OnAppStateChange({ xrSessionEnded: true });
-  });
+		environment.visible = debugSettings.drawEnvironment;
+		buttonGroup.visible = debugSettings.drawButtons;
 
-  xrLighting.addEventListener('envmapchange', () => {
-    // When exiting AR mode we need to re-enable the environment rendering
-    if (xrMode != 'immersive-ar' && debugSettings.drawSkybox) {
-      scene.background = xrLighting.envMap;
-    } else {
-      scene.background = null;
-    }
+		OnAppStateChange({ xrSessionEnded: true });
+	});
 
-    if (xrDinosaur) {
-      xrDinosaur.envMap = xrLighting.envMap;
-    }
+	xrLighting.addEventListener('envmapchange', () => {
+		// When exiting AR mode we need to re-enable the environment rendering
+		if (xrMode != 'immersive-ar' && debugSettings.drawSkybox) {
+			scene.background = xrLighting.envMap;
+		} else {
+			scene.background = null;
+		}
 
-    for (let controller of controllers) {
-      controller.model.setEnvironmentMap(xrLighting.envMap);
-    }
-  });
+		if (xrDinosaur) {
+			xrDinosaur.envMap = xrLighting.envMap;
+		}
 
-  preloadPromise = xrLighting.loadHDRSkybox('media/textures/equirectangular/misty_pines_2k.hdr');
-  return preloadPromise;
+		for (let controller of controllers) {
+			controller.model.setEnvironmentMap(xrLighting.envMap);
+		}
+	});
+
+	//preloadPromise = xrLighting.loadHDRSkybox('media/textures/equirectangular/misty_pines_2k.hdr');
+	//return preloadPromise;
 }
 
 export function RunDinosaurApp(container, options = {}) {
-  if (!appRunning) {
-    // Ensure the app content has been loaded (will early terminate if already
-    // called).
-    PreloadDinosaurApp();
+	if (!appRunning) {
+		// Ensure the app content has been loaded (will early terminate if already
+		// called).
+		PreloadDinosaurApp();
 
-    // Build out some final bits of UI
-    if (debugEnabled) {
-      initDebugUI();
-    }
+		// Build out some final bits of UI
+		if (debugEnabled) {
+			initDebugUI();
+		}
 
-    buildButtons();
+		buildButtons();
 
-    // Attach the main WebGL canvas and supporting UI to the page
-    container.appendChild(renderer.domElement);
-    document.body.appendChild(container);
+		// Attach the main WebGL canvas and supporting UI to the page
+		container.appendChild(renderer.domElement);
+		document.body.appendChild(container);
 
-    // Start the render loop
-    renderer.setAnimationLoop(render);
+		// Start the render loop
+		renderer.setAnimationLoop(render);
 
-    appRunning = true;
-  }
+		appRunning = true;
+	}
 
-  // If the app was requested to start up immediately into a given XR session
-  // mode, do so now.
-  dinosaurScale = 1;
+	// If the app was requested to start up immediately into a given XR session
+	// mode, do so now.
+	dinosaurScale = 1;
 
-  if (options.xrSessionMode) {
-    if (options.xrSessionMode === 'immersive-ar' && options.arScale) {
-      dinosaurScale = options.arScale;
-    }
-    StartXRSession(options.xrSessionMode);
-  }
+	if (options.xrSessionMode) {
+		if (options.xrSessionMode === 'immersive-ar' && options.arScale) {
+			dinosaurScale = options.arScale;
+		}
+		StartXRSession(options.xrSessionMode);
+	}
 
-  if (options.dinosaur) {
-    loadModel(options.dinosaur);
-  }
+	if (options.dinosaur) {
+		loadModel(options.dinosaur);
+	}
 }
 
 export function EndXRSession() {
-  if (xrSession) {
-    xrSession.end();
-  }
+	if (xrSession) {
+		xrSession.end();
+	}
 }
 
 function StartXRSession(mode) {
-  if (xrSession && xrMode == mode) {
-    return;
-  }
+	if (xrSession && xrMode == mode) {
+		return;
+	}
 
-  let referenceSpace = mode == 'immersive-ar' ? 'local' : 'local-floor';
+	let referenceSpace = mode == 'immersive-ar' ? 'local' : 'local-floor';
 
-  let sessionOptions = {
-    requiredFeatures: [referenceSpace]
-  };
-  if (mode === 'immersive-ar') {
-    sessionOptions.requiredFeatures.push('hit-test');
-    /*sessionOptions.optionalFeatures = ['dom-overlay'],
-    sessionOptions.domOverlay = { root: document.body };*/
-  }
+	let sessionOptions = {
+		requiredFeatures: [referenceSpace]
+	};
+	if (mode === 'immersive-ar') {
+		sessionOptions.requiredFeatures.push('hit-test');
+		/*sessionOptions.optionalFeatures = ['dom-overlay'],
+		sessionOptions.domOverlay = { root: document.body };*/
+	}
 
-  navigator.xr.requestSession(mode, sessionOptions).then(async (session) => {
-    xrSession = session;
-    xrMode = mode;
-    renderer.xr.setReferenceSpaceType(referenceSpace);
-    renderer.xr.setSession(session);
-  });
+	navigator.xr.requestSession(mode, sessionOptions).then(async (session) => {
+		xrSession = session;
+		xrMode = mode;
+		renderer.xr.setReferenceSpaceType(referenceSpace);
+		renderer.xr.setSession(session);
+	});
 }
 
 function buildButtons() {
-  if (!debugEnabled) {
-    buttonGroup.visible = false;
-  }
+	if (!debugEnabled) {
+		buttonGroup.visible = false;
+	}
 
-  buttonGroup.position.y = targetButtonGroupHeight = 0.6;
-  buttonGroup.position.z = -0.9;
-  buttonGroup.rotation.x = Math.PI * 0.3;
+	buttonGroup.position.y = targetButtonGroupHeight = 0.6;
+	buttonGroup.position.z = -0.9;
+	buttonGroup.rotation.x = Math.PI * 0.3;
 
-  let x = LEFT_BUTTON_X;
-  let y = 0;
-  let z = -BUTTON_SPACING * 0.5;
-  let idx = 0;
-  for (let i in xrDinosaurLoader.allDinosaurs) {
-    let dino = xrDinosaurLoader.allDinosaurs[i];
-    if (dino.debugOnly) { continue; }
+	let x = LEFT_BUTTON_X;
+	let y = 0;
+	let z = -BUTTON_SPACING * 0.5;
+	let idx = 0;
+	for (let i in xrDinosaurLoader.allDinosaurs) {
+		let dino = xrDinosaurLoader.allDinosaurs[i];
+		if (dino.debugOnly) { continue; }
 
-    let button = buttonManager.createButton({
-      imageUrl: `media/textures/button-atlas.png`,
-      imageOffset: dino.buttonAtlasOffset ? dino.buttonAtlasOffset : [0, 0],
-      title: dino.name,
-      onClick: () => {
-        loadModel(i);
-      },
-    });
-    button.position.set(x, y, z);
-    idx++;
-    if (idx % ROW_LENGTH == 0) {
-      x = LEFT_BUTTON_X;
-      z += BUTTON_SPACING;
-    } else {
-      x += BUTTON_SPACING;
-    }
-    buttonGroup.add(button);
-  }
+		let button = buttonManager.createButton({
+			imageUrl: `media/textures/button-atlas.png`,
+			imageOffset: dino.buttonAtlasOffset ? dino.buttonAtlasOffset : [0, 0],
+			title: dino.name,
+			onClick: () => {
+				loadModel(i);
+			},
+		});
+		button.position.set(x, y, z);
+		idx++;
+		if (idx % ROW_LENGTH == 0) {
+			x = LEFT_BUTTON_X;
+			z += BUTTON_SPACING;
+		} else {
+			x += BUTTON_SPACING;
+		}
+		buttonGroup.add(button);
+	}
 
-  let hornButton = buttonManager.createButton({
-    imageUrl: `media/textures/button-atlas.png`,
-    imageOffset: [0.75, 0.5],
-    title: "Airhorn",
-    onClick: () => {
-      scare();
-    },
-  });
-  hornButton.scale.multiplyScalar(1.1);
-  hornButton.position.copy(HORN_BUTTON_POSITION);
-  buttonGroup.add(hornButton);
+	let hornButton = buttonManager.createButton({
+		imageUrl: `media/textures/button-atlas.png`,
+		imageOffset: [0.75, 0.5],
+		title: "Airhorn",
+		onClick: () => {
+			scare();
+		},
+	});
+	hornButton.scale.multiplyScalar(1.1);
+	hornButton.position.copy(HORN_BUTTON_POSITION);
+	buttonGroup.add(hornButton);
 
-  let upButton = buttonManager.createButton({
-    imageUrl: `media/textures/button-atlas.png`,
-    imageOffset: [0.25, 0.5],
-    title: "Raise Platform",
-    onClick: () => {
-      environment.raisePlatform();
-    },
-  });
-  upButton.position.copy(UP_BUTTON_POSITION);
-  buttonGroup.add(upButton);
+	let upButton = buttonManager.createButton({
+		imageUrl: `media/textures/button-atlas.png`,
+		imageOffset: [0.25, 0.5],
+		title: "Raise Platform",
+		onClick: () => {
+			environment.raisePlatform();
+		},
+	});
+	upButton.position.copy(UP_BUTTON_POSITION);
+	buttonGroup.add(upButton);
 
-  let downButton = buttonManager.createButton({
-    imageUrl: `media/textures/button-atlas.png`,
-    imageOffset: [0.5, 0.5],
-    title: "Lower Platform",
-    onClick: () => {
-      environment.lowerPlatform();
-    },
-  });
-  downButton.position.copy(DOWN_BUTTON_POSITION);
-  buttonGroup.add(downButton);
+	let downButton = buttonManager.createButton({
+		imageUrl: `media/textures/button-atlas.png`,
+		imageOffset: [0.5, 0.5],
+		title: "Lower Platform",
+		onClick: () => {
+			environment.lowerPlatform();
+		},
+	});
+	downButton.position.copy(DOWN_BUTTON_POSITION);
+	buttonGroup.add(downButton);
 
-  // "Glass" pedestal
-  let glassGeometry = new THREE.BoxBufferGeometry(1.8, 0.05, 0.5);
-  let glassMaterial = new THREE.MeshLambertMaterial({
-    color: 0xAACCFF,
-    transparent: true,
-    opacity: 0.3,
-  });
-  let glassMesh = new THREE.Mesh(glassGeometry, glassMaterial);
-  glassMesh.position.y = -0.05;
-  buttonGroup.add(glassMesh);
+	// "Glass" pedestal
+	let glassGeometry = new THREE.BoxBufferGeometry(1.8, 0.05, 0.5);
+	let glassMaterial = new THREE.MeshLambertMaterial({
+		color: 0xAACCFF,
+		transparent: true,
+		opacity: 0.3,
+	});
+	let glassMesh = new THREE.Mesh(glassGeometry, glassMaterial);
+	glassMesh.position.y = -0.05;
+	buttonGroup.add(glassMesh);
 }
 
-function loadModel(key) {
-  if (xrDinosaur) {
-    scene.remove(xrDinosaur);
-    xrDinosaur = null;
-    blobShadowManager.shadowNodes = [];
-  }
+function makeLabelCanvas(size, name)
+{
+	const borderSize = 10;
+	const ctx = document.createElement('canvas').getContext('2d');
+	const font =  `${size}px bold sans-serif`;
+	ctx.font = font;
 
-  return xrDinosaurLoader.load(key).then((dinosaur) => {
-    if (dinosaur != xrDinosaurLoader.currentDinosaur) { return; }
+	// measure how long the name will be
+	const textWidth = ctx.measureText(name).width;
 
-    if (xrDinosaur) {
-      scene.remove(xrDinosaur);
-      xrDinosaur = null;
-    }
+	const doubleBorderSize = borderSize * 2;
 
-    xrDinosaur = dinosaur;
-    xrDinosaur.envMap = xrLighting.envMap;
-    xrDinosaur.visible = debugSettings.drawDinosaur;
-    xrDinosaur.scale.setScalar(dinosaurScale, dinosaurScale, dinosaurScale);
+	const width = (textWidth + doubleBorderSize);
+	const height = (size + doubleBorderSize);
 
-    // Ensure the dinosaur's shaders are ready to use before we add it to the
-    // scene.
-    //renderer.compileTarget(scene, xrDinosaur, () => {
-      scene.add(xrDinosaur);
-    //});
+	ctx.canvas.width = width;
+	ctx.canvas.height = height;
 
-    controls.target.copy(xrDinosaur.center);
-    controls.update();
+	// need to set font again after resizing canvas
+	ctx.font = font;
+	ctx.textBaseline = 'middle';
+	ctx.textAlign = 'center';
 
-    blobShadowManager.shadowNodes = xrDinosaur.shadowNodes;
-    blobShadowManager.shadowSize = xrDinosaur.shadowSize * dinosaurScale;
+	ctx.fillStyle = 'black';
+	ctx.fillRect(0, 0, width, height);
+	// scale to fit but don't stretch
+	//const scaleFactor = Math.min(1,textWidth);
+	ctx.translate(width / 2, height / 2);
+	ctx.scale(1, 1);
+	ctx.fillStyle = 'white';
+	ctx.fillText(name, 0, 0);
 
-    OnAppStateChange({ dinosaur: key });
-  }).catch((err) => {
-    // This will usually happen if a new dino is selected before the
-    // previous one finishes loading. Not a cause for concern.
-    console.log(err);
-  });
+	return ctx.canvas;
+}
+
+function CheckGreetingForSounds(message){
+
+	var stringMessage = message;
+	var string = stringMessage.substring(0, 7);
+
+	if(string == "<sound>")
+	{
+		var soundToPlay = message.split('<sound>');
+		PlaySound(soundToPlay[1]);
+		return true;
+
+	}else{
+		return false;
+	}
+
+}
+
+function PlaySound(file)
+{
+	//alert(file);
+	fileSound = new THREE.Audio(listener);
+	audioLoader.load('media/sounds/'+file, (buffer) =>
+	{
+		fileSound = new THREE.Audio(listener);
+		fileSound.setBuffer(buffer);
+		fileSound.setVolume(1.0);
+		fileSound.play();
+	});
+
+}
+
+var VRCaption = null;
+
+function showVRCaption(message)
+{
+	caption_timeout = null;
+
+	var hasSound = CheckGreetingForSounds(message);
+
+	if(hasSound)
+	{
+	}else{
+
+		if ('speechSynthesis' in window)
+		{
+			// Speech Synthesis supported 🎉
+			var msg = new SpeechSynthesisUtterance();
+			msg.text = message;
+			window.speechSynthesis.speak(msg);
+		}
+
+		var canvas = makeLabelCanvas(CAPTION_VR_LABEL_SIZE, message);
+		var texture = new THREE.CanvasTexture(canvas);
+		// because our canvas is likely not a power of 2
+		// in both dimensions set the filtering appropriately.
+		texture.minFilter = THREE.LinearFilter;
+		texture.wrapS = THREE.ClampToEdgeWrapping;
+		texture.wrapT = THREE.ClampToEdgeWrapping;
+
+		var labelMaterial = new THREE.SpriteMaterial({
+			map: texture,
+			side: THREE.DoubleSide,
+			transparent: true,
+		});
+
+		var label = new THREE.Sprite(labelMaterial);
+		xrDinosaur.add(label);
+		label.position.y = xrDinosaur.namePlateY;
+		const textWidth = message.length * CAPTION_VR_LABEL_SCALE;
+
+		label.scale.set(textWidth,0.33,1);
+		VRCaption = label;
+	}
+
+	caption_timeout = setTimeout(DestroyVRCaption, message.length * CAPTION_TIMEOUT_PER_CHARACTER_VR);
+
+}
+
+function showCaption(message)
+{
+	caption_timeout = null;
+
+	var hasSound = CheckGreetingForSounds(message);
+
+	if(hasSound)
+	{
+	}else
+	{
+		var robotCaptions = document.getElementById('captions');
+		var captionText = document.getElementById('captionText');
+		captionText.innerHTML = message;
+	}
+
+	caption_timeout = setTimeout(DestroyCaption, message.length * CAPTION_TIMEOUT_PER_CHARACTER);
+}
+
+function DestroyCaption()
+{
+	var robotCaptions = document.getElementById('captions');
+	var captionText = document.getElementById('captionText');
+	captionText.innerHTML = "";
+	currentDinosaurIndex++;
+
+	if(currentDinosaurIndex < currentDinosaur.greeting.length)
+	{
+		showCaption(currentDinosaur.greeting[currentDinosaurIndex]);
+	}
+
+}
+
+function DestroyVRCaption()
+{
+	VRCaption.scale.set(0,0,0);
+	//scene.remove(VRCaption);
+	currentDinosaurIndex++;
+
+	if(currentDinosaurIndex < currentDinosaur.greeting.length)
+	{
+		showVRCaption(currentDinosaur.greeting[currentDinosaurIndex]);
+	}
+}
+
+var currentDinosaur = null;
+var currentDinosaurIndex = 0;
+
+function loadModel(key)
+{
+	if (xrDinosaur)
+	{
+		scene.remove(xrDinosaur);
+		xrDinosaur = null;
+		blobShadowManager.shadowNodes = [];
+	}
+
+	return xrDinosaurLoader.load(key).then((dinosaur) => {
+		if (dinosaur != xrDinosaurLoader.currentDinosaur) { return; }
+
+		if (xrDinosaur) {
+			scene.remove(xrDinosaur);
+			xrDinosaur = null;
+		}
+
+		xrDinosaur = dinosaur;
+		xrDinosaur.envMap = xrLighting.envMap;
+		xrDinosaur.visible = debugSettings.drawDinosaur;
+		xrDinosaur.scale.setScalar(dinosaurScale, dinosaurScale, dinosaurScale);
+		currentDinosaur = xrDinosaur;
+		currentDinosaurIndex = 0;
+
+		if(xrDinosaur.greeting.length > 0)
+		{
+
+			if (navigator.xr)
+			{
+				navigator.xr.isSessionSupported('immersive-vr')
+				.then((isSupported) => {
+					if (isSupported)
+					{
+						setTimeout(showVRCaption,1500,xrDinosaur.greeting[currentDinosaurIndex]);
+					}else{
+
+						setTimeout(showCaption,1500,xrDinosaur.greeting[currentDinosaurIndex]);
+					}
+				});
+			}
+		}
+
+		// Ensure the dinosaur's shaders are ready to use before we add it to the
+		// scene.
+		//renderer.compileTarget(scene, xrDinosaur, () => {
+		scene.add(xrDinosaur);
+		//});
+
+		controls.target.copy(xrDinosaur.center);
+		controls.update();
+
+		blobShadowManager.shadowNodes = xrDinosaur.shadowNodes;
+		blobShadowManager.shadowSize = xrDinosaur.shadowSize * dinosaurScale;
+
+		OnAppStateChange({ dinosaur: key });
+	}).catch((err) => {
+		// This will usually happen if a new dino is selected before the
+		// previous one finishes loading. Not a cause for concern.
+		console.log(err);
+	});
 }
 
 function scare() {
-  if (!hornSound) {
-    audioLoader.load('media/sounds/horn.mp3', (buffer) => {
-      hornSound = new THREE.Audio(listener);
-      hornSound.setBuffer(buffer);
-      scare();
-    });
-  } else {
-    hornSound.play();
-    if (xrDinosaur) { xrDinosaur.scare(); }
-  }
+	if (!hornSound) {
+		audioLoader.load('media/sounds/horn.mp3', (buffer) => {
+			hornSound = new THREE.Audio(listener);
+			hornSound.setBuffer(buffer);
+			scare();
+		});
+	} else {
+		hornSound.play();
+		if (xrDinosaur) { xrDinosaur.scare(); }
+	}
 }
 
 function onWindowResize() {
-  camera.aspect = window.innerWidth / window.innerHeight;
-  camera.updateProjectionMatrix();
+	camera.aspect = window.innerWidth / window.innerHeight;
+	camera.updateProjectionMatrix();
 
-  renderer.setSize( window.innerWidth, window.innerHeight );
+	renderer.setSize( window.innerWidth, window.innerHeight );
 }
 
 //let frameId = 0;
 
 function render(time, xrFrame) {
-  let delta = clock.getDelta();
+	let delta = clock.getDelta();
 
-  if (xrDinosaur) {
-    if (placementMode && hitTestSource) {
-      let pose = null;
-      let hitTestResults = xrFrame.getHitTestResults(hitTestSource);
-      if (hitTestResults.length > 0) {
-        pose = hitTestResults[0].getPose(renderer.xr.getReferenceSpace());
-      }
+	if (xrDinosaur) {
+		if (placementMode && hitTestSource) {
+			let pose = null;
+			let hitTestResults = xrFrame.getHitTestResults(hitTestSource);
+			if (hitTestResults.length > 0) {
+				pose = hitTestResults[0].getPose(renderer.xr.getReferenceSpace());
+			}
 
-      if (pose) {
-        xrDinosaur.visible = true;
-        blobShadowManager.visible = true;
-        xrDinosaur.position.copy(pose.transform.position);
-        blobShadowManager.position.y = pose.transform.position.y;
-      } else {
-        xrDinosaur.visible = false;
-        blobShadowManager.visible = false;
-      }
-    } else if(debugSettings.animate) {
-      xrDinosaur.update(delta);
-    }
-  }
+			if (pose) {
+				xrDinosaur.visible = true;
+				blobShadowManager.visible = true;
+				xrDinosaur.position.copy(pose.transform.position);
+				blobShadowManager.position.y = pose.transform.position.y;
+			} else {
+				xrDinosaur.visible = false;
+				blobShadowManager.visible = false;
+			}
+		} else if(debugSettings.animate) {
+			xrDinosaur.update(delta);
+		}
+	}
 
-  if (xrMode != 'immersive-ar') {
-    environment.update(delta);
+	if (xrMode != 'immersive-ar') {
+		environment.update(delta);
 
-    // Update the button height to always stay within a reasonable range of the user's head
-    /*if (renderer.xr.isPresenting && buttonGroup) {
-      let worldPosition = new THREE.Vector3();
-      viewerProxy.getWorldPosition(worldPosition);
+		// Update the button height to always stay within a reasonable range of the user's head
+		/*if (renderer.xr.isPresenting && buttonGroup) {
+		let worldPosition = new THREE.Vector3();
+		viewerProxy.getWorldPosition(worldPosition);
 
-      let idealPosition = Math.max(MIN_BUTTON_HEIGHT,
-                          Math.min(MAX_BUTTON_HEIGHT,
-                                  (worldPosition.y - environment.platform.position.y) + IDEAL_RELATIVE_BUTTON_HEIGHT));
-      if (Math.abs(idealPosition - buttonGroup.position.y) > BUTTON_HEIGHT_DEADZONE) {
-        targetButtonGroupHeight = idealPosition;
-      }
+		let idealPosition = Math.max(MIN_BUTTON_HEIGHT,
+		Math.min(MAX_BUTTON_HEIGHT,
+		(worldPosition.y - environment.platform.position.y) + IDEAL_RELATIVE_BUTTON_HEIGHT));
+		if (Math.abs(idealPosition - buttonGroup.position.y) > BUTTON_HEIGHT_DEADZONE) {
+		targetButtonGroupHeight = idealPosition;
+	}
 
-      // Ease into the target position
-      buttonGroup.position.y += (targetButtonGroupHeight - buttonGroup.position.y) * 0.05;
-    }*/
+	// Ease into the target position
+	buttonGroup.position.y += (targetButtonGroupHeight - buttonGroup.position.y) * 0.05;
+}*/
 
-    buttonManager.update(delta);
+buttonManager.update(delta);
 
-    locomotionManager.teleportGuide.options.groundHeight = environment.platformHeight;
-  }
+locomotionManager.teleportGuide.options.groundHeight = environment.platformHeight;
+}
 
-  if (controllers.length) {
-    cursorManager.update([controllers[0].targetRay, controllers[1].targetRay]);
-  }
+if (controllers.length) {
+	cursorManager.update([controllers[0].targetRay, controllers[1].targetRay]);
+}
 
-  locomotionManager.update(renderer, camera);
+locomotionManager.update(renderer, camera);
 
-  if (takeScreenshot) {
-    renderer.setPixelRatio(window.devicePixelRatio * 2);
-  }
+if (takeScreenshot) {
+	renderer.setPixelRatio(window.devicePixelRatio * 2);
+}
 
-  renderer.render(scene, camera);
+renderer.render(scene, camera);
 
-  if (takeScreenshot) {
-    let img = new Image();
-    img.src = renderer.domElement.toDataURL();
-    img.classList.add('screenshot');
-    screenshotList.appendChild(img);
-    renderer.setPixelRatio(window.devicePixelRatio);
-    takeScreenshot = false;
-  }
+if (takeScreenshot) {
+	let img = new Image();
+	img.src = renderer.domElement.toDataURL();
+	img.classList.add('screenshot');
+	screenshotList.appendChild(img);
+	renderer.setPixelRatio(window.devicePixelRatio);
+	takeScreenshot = false;
+}
 
-  if (stats) { stats.update(); }
+if (stats) { stats.update(); }
 }

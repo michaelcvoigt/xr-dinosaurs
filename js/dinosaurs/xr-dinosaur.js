@@ -25,6 +25,7 @@ const DEFAULT_ORIENTATION = Math.PI * 0.2;
 const DEFAULT_HEIGHT = 3;
 const DEFAULT_ANIMATION_SEQUENCE = ['Idle'];
 
+
 export class XRDinosaur extends THREE.Object3D {
   constructor() {
     super();
@@ -48,26 +49,45 @@ export class XRDinosaur extends THREE.Object3D {
     this.height = DEFAULT_HEIGHT;
     this.position.fromArray(DEFAULT_POSITION);
     this.rotation.y = DEFAULT_ORIENTATION;
+    this.greeting = "";
+  
+
   }
 
-  set animations(animations) {
+
+  set animations(animations)
+  {
+
+    //const mixer = new AnimationMixer(this);
+    //const action = mixer.clipAction(moveBlinkClip);
+
+    /*
     // Process animations into clips
     for (let i = 0; i < animations.length; ++i) {
       let animation = animations[i];
       let action = this._mixer.clipAction(animation);
       this._actions[animation.name] = action;
-      if (animation.name == 'Die' || animation.name == 'Get_Up') {
+
+      if (animation.name == 'Die' || animation.name == 'Get_Up')
+      {
         action.loop = THREE.LoopOnce;
       }
     }
 
+
+    if(animations.length >0)
+    {
     // Set up the animation sequence
     let animationIndex = 0;
     let animationSequence = this.animationSequence;
+
+alert(animationSequence[0]);
+
     this._currentAction = this._actions[animationSequence[0]];
     this._currentAction.play();
 
-    let nextAnimation = (e) => {
+    let nextAnimation = (e) =>
+    {
       if (e.action == this._actions.Die) {
         this._mixer.stopAllAction();
         this._scared = false;
@@ -82,6 +102,9 @@ export class XRDinosaur extends THREE.Object3D {
     }
     this._mixer.addEventListener('loop', nextAnimation);
     this._mixer.addEventListener('finished', nextAnimation);
+
+    }
+    */
   }
 
   set envMap(value) {

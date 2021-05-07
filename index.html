@@ -20,412 +20,362 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 -->
 <html>
-  <head>
-    <meta charset='utf-8'>
-    <meta name='viewport' content='width=device-width, initial-scale=1, user-scalable=no'>
-    <meta name='mobile-web-app-capable' content='yes'>
-    <meta name='apple-mobile-web-app-capable' content='yes'>
+<head>
+  <meta charset='utf-8'>
+  <meta name='viewport' content='width=device-width, initial-scale=1, user-scalable=no'>
+  <meta name='mobile-web-app-capable' content='yes'>
+  <meta name='apple-mobile-web-app-capable' content='yes'>
 
-    <link rel="manifest" href="manifest.json">
-    <link rel='icon' type='image/png' sizes='32x32' href='media/textures/dino-icon-32.png'>
-    <link rel='icon' type='image/png' sizes='96x96' href='media/textures/dino-icon-96.png'>
-    <link rel='stylesheet' href='css/dinosaurs.css'>
+  <link rel="manifest" href="manifest.json">
+  <link rel='icon' type='image/png' sizes='32x32' href='media/textures/dino-icon-32.png'>
+  <link rel='icon' type='image/png' sizes='96x96' href='media/textures/dino-icon-96.png'>
+  <link rel='stylesheet' href='dinosaurs.css'>
 
-    <title>WebXR Dinosaurs</title>
-  </head>
+  <title>Michael Voigt : WebXR Robot</title>
+</head>
 
-  <body>
-    <script src="js/third-party/three.js/examples/js/vr/HelioWebXRPolyfill.js"></script>
-    <script src='js/third-party/dat.gui.min.js'></script>
+<body>
+  <script src="js/third-party/three.js/examples/js/vr/HelioWebXRPolyfill.js"></script>
+  <script src='js/third-party/dat.gui.min.js'></script>
 
-    <article id='landingPage' class='not-hidden'>
-      <header>
-        <h1>XR Dinosaurs</h1>
-        <section>
-          <h2>Welcome to the web's virtual Dinosaur Park!</h2>
-          <p>We've used the magic of your browser to bring back a friendly pack of prehistoric pals.</p>
-          <p>Our dinosaurs can be viewed with a variety of Virtual Reality headsets, Augmented Reality
-            headsets and phones, or directly in your browser.</p>
-        </section>
-      </header>
 
-      <main class='loading'>
-        <div class='lds-ellipsis'>
-          <div></div><div></div><div></div><div></div>
-        </div>
-        <ul class='menu main-menu'>
-          <li id='view2DButton'>
-            See the Dinosaurs in your Browser.
-          </li>
-          <li class='disabled' id='viewVRButton'>
-            Visit our Dinosaurs in Virtual Reality.
-          </li>
-          <li class='disabled' id='viewARButton'>
-            Bring a Dinosaur home with Augmented Reality.
-          </li>
-        </ul>
-      </main>
+  <article id='captionText' class="captionMenu" style="font-size:22pt;text-align: center;margin-top: 4%;width=80%;">
+  </article>
 
-      <footer>
-        <div class='webxr-experience'>
-          XR Dinosaurs is a<br/>
-          <a href='https://immersiveweb.dev/'>WebXR Experience</a>
-        </div>
+  <article id='landingPage' class='not-hidden'>
+    <header>
+      <h1>XR Robots</h1>
+      <section>
+        <p>Hi. I'm Michael Voigt And this is my playground for cute robots.</p>
+        <p>This is the evolution of a cloned example project from WebXR.</p>
+        <p>Make sure to turn on your sound!</p>
+        <p>My LinkedIn Page is : <a href="https://www.linkedin.com/in/michaelvoigt/">HERE</a></p>
+      </section>
+    </header>
 
-        <div class='credits'>
-          <a class='source-link' href='https://github.com/toji/xr-dinosaurs'>
-            Get the source on GitHub
-          </a>
-          Brought to you with the help of:
-          <ul>
-            <li><a href='https://threejs.org/'>Three.js</a></li>
-            <li><a href='https://www.khronos.org/gltf/'>glTF</a></li>
-            <li><a href='https://google.github.io/draco/'>Draco</a></li>
-            <li><a href='http://workshop.chromeexperiments.com/examples/gui/'>dat.gui</a></li>
-          </ul>
-        </div>
-
-        <h3>
-          <!--a href="intent://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/Avocado/glTF/Avocado.gltf#Intent;scheme=https;package=com.google.android.googlequicksearchbox;action=android.intent.action.VIEW;S.browser_fallback_url=https://developers.google.com/ar;end;">Avocado</a-->
-          <a href="intent://www.xrdinosaurs.com/media/models/ankylosaurus/compressed.glb#Intent;scheme=https;package=com.google.android.googlequicksearchbox;action=android.intent.action.VIEW;S.browser_fallback_url=https://developers.google.com/ar;end;">Rawr!</a>
-        </h3>
-      </footer>
-    </article>
-
-    <article id='dinosaurSelection' class='hidden'>
-      <div class='button-bar'>
-        <button id='closeSelection' alt='Close Dinosaur Selection'>Close</button>
-        <select id='arScale' alt='The size of the dinosaur in AR'>
-          <option value='1'>1:1 - Full Size</option>
-          <option value='0.25' selected>1:4 - Quarter Size</option>
-          <option value='0.0625'>1:16 - Toy Size</option>
-        </select>
-      </div>
-      <ul id='dinosaurList' class='menu'>
-        <li data-dinosaur='ankylosaurus'>
-          Anklyosaurus
-          <p>She may be covered in spikes, but our Ankylosaur is actually quite cuddly
-          and loves to meet new friends! Think of her as a big, prehistoric puppy.</p>
-        </li>
-        <li data-dinosaur='brachiosaurus'>
-          Brachiosaurus
-          <p>Our biggest dinosaur by far, she weighs as much as 12 elephants! But don't
-          worry, she's very friendly and we've taught her to be <i>extremely</i> careful about
-          where she's stepping!</p>
-        </li>
-        <li data-dinosaur='dilophosaurus'>
-          Dilophosaurus
-          <p>Our Dilophosaurus is fully aware that her frill isn't "scientifically accurate"
-          and would like to point out that it makes her look fabulous nevertheless! She does,
-          however, find spitting of any sort to be extremely rude.</p>
-        </li>
-        <li data-dinosaur='pachycephalosaurus'>
-          Pachycephalosaurus
-          <p>This sweet "Pachy" is one of our older dinosaurs. She's a bit shy and
-          gets nervous around new people, but is incredibly gentle.</p>
-        </li>
-        <li data-dinosaur='parasaurolophus'>
-          Parasaurolophus
-          <p>Our Parasaurolophus is a mischevious, silly dinosaur. The long crest on
-          her head acts like a trumpet, which she loves using to surprise park guests.</p>
-        </li>
-        <li data-dinosaur='raptor'>
-          Utahraptor
-          <p>You've probably heard these smart dinosaurs called "Velociraptors", but
-          those were actually quite small. Our Utahraptor is much closer in size to
-          the dinosaurs you know and love from the big screen.</p>
-        </li>
-        <li data-dinosaur='spinosaurus'>
-          Spinosaurus
-          <p>A big carnivore with a big sail, our Spinosaurus prefers to spend her
-          time hanging out in her swampy pool, but is happy to come out to say
-          hello to our park visitors.</p>
-        </li>
-        <li data-dinosaur='stegosaurus'>
-          Stegosaurus
-          <p>Strong and proud, the Stegosaurus is one of our more popular dinosaurs.
-          Her favorite thing is getting her plates scrubbed clean so they stay such
-          a beautiful, shiny red.</p>
-        </li>
-        <li data-dinosaur='triceratops'>
-          Triceratops
-          <p>Our youngest dinosaur, this juvenile Triceratops is a smaller than a
-          full grown adult would be. Spunky and playful, she loves being the center
-          of attention.</p>
-        </li>
-        <li data-dinosaur='trex'>
-          Tyrannosaurus Rex
-          <p>Don't let the big teeth scare you, our T-Rex is really a big softie that
-          loves showing off. Her hobbies include making stompy noises with her feet
-          and going for runs around her pen.</p>
-        </li>
-      </ul>
-    </article>
-
-    <article id='canvasContainer' class='hidden loading'>
-      <div class='button-bar'>
-        <button id='showSelection' alt='Select a different Dinosaur'>Back</button>
-        <button id='showDinosaurVR' alt='View Dinosaur in VR' class='hidden'>Enter VR</button>
-        <button id='showDinosaurAR' alt='View Dinosaur in AR' class='hidden'>Enter AR</button>
-      </div>
-
+    <main class='loading'>
       <div class='lds-ellipsis'>
         <div></div><div></div><div></div><div></div>
       </div>
-      <!-- Main WebGL content, injected by dinosaur-app.js -->
-    </article>
+      <ul class='menu main-menu'>
+        <li id='view2DButton'>
+          See the Robots in your Browser.
+        </li>
+        <li class='disabled' id='viewVRButton'>
+          Visit our Robots in Virtual Reality.
+        </li>
+        <li class='disabled' id='viewARButton'>
+          Bring a Robots home with Augmented Reality.
+        </li>
+      </ul>
+    </main>
 
-    <script type="module">
-      import WebXRPolyfill from './js/third-party/webxr-polyfill/build/webxr-polyfill.module.js';
-      import { QueryArgs } from './js/query-args.js';
+  </article>
+  <article id='dinosaurSelection' class='hidden'>
+    <div class='button-bar'>
+      <button id='closeSelection' alt='Close Dinosaur Selection'>Close</button>
+      <select id='arScale' alt='The size of the dinosaur in AR'>
+        <option value='1'>1:1 - Full Size</option>
+        <option value='0.25' selected>1:4 - Quarter Size</option>
+        <option value='0.0625'>1:16 - Toy Size</option>
+      </select>
+    </div>
+    <ul id='dinosaurList' class='menu'>
+      <li data-dinosaur='robot_0'>
+        Robot 0
+        <p>Cute robot to look at.</p>
+      </li>
+      <li data-dinosaur='robot_1'>
+        Robot 1
+        <p>Cute robot to look at.</p>
+        </li>
+        <li data-dinosaur='robot_2'>
+          Robot 2
+          <p>Cute robot to look at.</p>
+          </li>
+          <li data-dinosaur='robot_3'>
+            Robot 3
+            <p>Cute robot to look at.</p>
+            </li>
+            <li data-dinosaur='parasaurolophus'>
+              Parasaurolophus
+              <p>Cute robot to look at.</p>
+              </li>
 
-      import { PreloadDinosaurApp, RunDinosaurApp, SetStateChangeCallback, EndXRSession } from './js/dinosaur-app.js';
+            </ul>
+          </article>
 
-      const SCREEN = {
-        Home: 0,
-        Select: 1,
-        View: 2
-      };
+          <article id='canvasContainer' class='hidden loading'>
+            <div class='button-bar'>
+              <button id='showSelection' alt='Select a different Dinosaur'>Back</button>
+              <button id='showDinosaurVR' alt='View Dinosaur in VR' class='hidden'>Enter VR</button>
+              <button id='showDinosaurAR' alt='View Dinosaur in AR' class='hidden'>Enter AR</button>
+            </div>
 
-      const VIEW_MODE = {
-        Flat: 0,
-        VR: 1,
-        AR: 2
-      };
+            <div class='lds-ellipsis'>
+              <div></div><div></div><div></div><div></div>
+            </div>
+            <!-- Main WebGL content, injected by dinosaur-app.js -->
+          </article>
 
-      let appState = {
-        screen: SCREEN.Home,
-        viewMode: VIEW_MODE.Flat,
-        dinosaur: null,
-        debug: QueryArgs.getBool('debug'),
-        inXR: false
-      };
+          <script type="module">
+          import WebXRPolyfill from './js/third-party/webxr-polyfill/build/webxr-polyfill.module.js';
+          import { QueryArgs } from './js/query-args.js';
 
-      // Initialized the polyfill unless specifically requested not to.
-      let usePolyfill = QueryArgs.getBool('polyfill', true);
-      if (usePolyfill) {
-        let polyfill = new WebXRPolyfill();
-      }
+          import { PreloadDinosaurApp, RunDinosaurApp, SetStateChangeCallback, EndXRSession } from './js/dinosaur-app.js';
 
-      let landingPage = document.getElementById('landingPage');
-      let mainElement = document.querySelector('main');
-      let selectionElement = document.getElementById('dinosaurSelection');
-      let containerElement = document.getElementById('canvasContainer');
+          const SCREEN = {
+            Home: 0,
+            Select: 1,
+            View: 2
+          };
 
-      let closeSelectionButton = document.getElementById('closeSelection');
-      let showSelectionButton = document.getElementById('showSelection');
-      let showDinosaurVRButton = document.getElementById('showDinosaurVR');
-      let showDinosaurARButton = document.getElementById('showDinosaurAR');
+          const VIEW_MODE = {
+            Flat: 0,
+            VR: 1,
+            AR: 2
+          };
 
-      let view2DButton = document.getElementById('view2DButton');
-      let viewVRButton = document.getElementById('viewVRButton');
-      let viewARButton = document.getElementById('viewARButton');
+          let appState = {
+            screen: SCREEN.Home,
+            viewMode: VIEW_MODE.Flat,
+            dinosaur: null,
+            debug: QueryArgs.getBool('debug'),
+            inXR: false
+          };
 
-      let arScaleSelect = document.getElementById('arScale');
+          // Initialized the polyfill unless specifically requested not to.
+          let usePolyfill = QueryArgs.getBool('polyfill', true);
+          if (usePolyfill) {
+            let polyfill = new WebXRPolyfill();
+          }
 
-      let vrSupported = false;
-      let arSupported = false;
+          let landingPage = document.getElementById('landingPage');
+          let mainElement = document.querySelector('main');
+          let selectionElement = document.getElementById('dinosaurSelection');
+          let containerElement = document.getElementById('canvasContainer');
 
-      function updateAppState(pushState = true) {
-        if (pushState) {
-          history.pushState(appState, null, null);
-        }
+          let closeSelectionButton = document.getElementById('closeSelection');
+          let showSelectionButton = document.getElementById('showSelection');
+          let showDinosaurVRButton = document.getElementById('showDinosaurVR');
+          let showDinosaurARButton = document.getElementById('showDinosaurAR');
 
-        switch (appState.screen) {
-          case SCREEN.Home:
-            landingPage.classList.remove('hidden');
-            containerElement.classList.add('hidden');
-            selectionElement.classList.add('hidden');
-            break;
-          case SCREEN.Select:
-            selectionElement.classList.remove('hidden');
+          let view2DButton = document.getElementById('view2DButton');
+          let viewVRButton = document.getElementById('viewVRButton');
+          let viewARButton = document.getElementById('viewARButton');
 
-            if (appState.viewMode == VIEW_MODE.AR) {
-              selectionElement.classList.add('ar');
-            } else {
-              selectionElement.classList.remove('ar');
+          let arScaleSelect = document.getElementById('arScale');
+
+          let vrSupported = false;
+          let arSupported = false;
+
+
+          function updateAppState(pushState = true) {
+            if (pushState) {
+              history.pushState(appState, null, null);
             }
 
-            break;
-          case SCREEN.View:
-            landingPage.classList.add('hidden');
-            selectionElement.classList.add('hidden');
-            containerElement.classList.remove('hidden');
+            switch (appState.screen)
+            {
+              case SCREEN.Home:
+              landingPage.classList.remove('hidden');
+              containerElement.classList.add('hidden');
+              selectionElement.classList.add('hidden');
+              var robotCaptions = document.getElementById('captions');
+              var captionText = document.getElementById('captionText');
+              captionText.innerHTML = "";
+              break;
 
-            if (appState.viewMode == VIEW_MODE.Flat) {
-              setTimeout(() => {
-                RunDinosaurApp(containerElement, { dinosaur: appState.dinosaur });
-              }, 100);
-            } else {
-              let immersiveMode = null;
-              if (appState.viewMode == VIEW_MODE.VR) {
-                immersiveMode = 'immersive-vr';
-              } else if (appState.viewMode == VIEW_MODE.AR) {
-                immersiveMode = 'immersive-ar';
+              case SCREEN.Select:
+              selectionElement.classList.remove('hidden');
+
+              if (appState.viewMode == VIEW_MODE.AR) {
+                selectionElement.classList.add('ar');
+              } else {
+                selectionElement.classList.remove('ar');
               }
 
-              RunDinosaurApp(containerElement, {
-                xrSessionMode: immersiveMode,
-                dinosaur: appState.dinosaur,
-                arScale: parseFloat(arScaleSelect.value)
+              break;
+
+              case SCREEN.View:
+              landingPage.classList.add('hidden');
+              selectionElement.classList.add('hidden');
+              containerElement.classList.remove('hidden');
+
+              if (appState.viewMode == VIEW_MODE.Flat) {
+                setTimeout(() => {
+                  RunDinosaurApp(containerElement, { dinosaur: appState.dinosaur });
+                }, 100);
+              } else {
+                let immersiveMode = null;
+                if (appState.viewMode == VIEW_MODE.VR) {
+                  immersiveMode = 'immersive-vr';
+                } else if (appState.viewMode == VIEW_MODE.AR) {
+                  immersiveMode = 'immersive-ar';
+                }
+
+                RunDinosaurApp(containerElement, {
+                  xrSessionMode: immersiveMode,
+                  dinosaur: appState.dinosaur,
+                  arScale: parseFloat(arScaleSelect.value)
+                });
+              }
+
+              break;
+            }
+          }
+
+          SetStateChangeCallback((state) => {
+            if (state.dinosaur) {
+              appState.dinosaur = state.dinosaur;
+              history.replaceState(appState, null, null);
+            }
+
+            if (state.xrSessionStarted) {
+              appState.inXR = true;
+              document.body.classList.add('xr');
+              document.body.classList.add(appState.viewMode == VIEW_MODE.AR ? 'ar' : 'vr');
+            }
+
+            if (state.xrSessionEnded) {
+              appState.inXR = false;
+              document.body.classList.remove('xr');
+              document.body.classList.remove('ar');
+              document.body.classList.remove('vr');
+              if (appState.viewMode == VIEW_MODE.AR) {
+                appState.screen = SCREEN.Select;
+              } else if (appState.viewMode == VIEW_MODE.VR) {
+                appState.viewMode = VIEW_MODE.Flat;
+              }
+              updateAppState(false);
+              history.replaceState(appState, null, null);
+            }
+          });
+
+          window.addEventListener("popstate", function(e) {
+            appState = e.state;
+            updateAppState(false);
+          });
+
+          closeSelectionButton.addEventListener('click', () => {
+            appState.screen = SCREEN.Home;
+            updateAppState();
+          });
+
+          showSelectionButton.addEventListener('click', () => {
+            appState.screen = SCREEN.Select;
+            updateAppState();
+          });
+
+          view2DButton.addEventListener('click', () => {
+            appState.screen = SCREEN.Select;
+            appState.viewMode = VIEW_MODE.Flat;
+            updateAppState();
+          });
+
+          function startVR() {
+            if (!vrSupported) return;
+            if (appState.inXR) {
+              EndXRSession();
+              return;
+            }
+            appState.screen = SCREEN.View;
+            appState.viewMode = VIEW_MODE.VR;
+            updateAppState();
+          }
+
+          viewVRButton.addEventListener('click', startVR);
+          showDinosaurVRButton.addEventListener('click', startVR);
+
+          function startAR() {
+            if (!arSupported) return;
+            if (appState.inXR) {
+              EndXRSession();
+              return;
+            }
+            appState.screen = SCREEN.View;
+            appState.viewMode = VIEW_MODE.AR;
+            updateAppState();
+          }
+
+          viewARButton.addEventListener('click', () => {
+            if (!arSupported) return;
+
+            appState.screen = SCREEN.Select;
+            appState.viewMode = VIEW_MODE.AR;
+            updateAppState();
+          });
+          showDinosaurARButton.addEventListener('click', startAR);
+
+          // Wire up each of the dinosaur selection options
+          let dinosaurOptions = document.querySelectorAll('#dinosaurList>li');
+          for (let dinosaur of dinosaurOptions) {
+            let dinosaurType = dinosaur.getAttribute('data-dinosaur');
+            dinosaur.addEventListener('click', () => {
+              appState.screen = SCREEN.View;
+              appState.dinosaur = dinosaurType;
+              updateAppState();
+            });
+          }
+
+          // Check to see if WebXR is available
+          if ( 'xr' in navigator ) {
+            if (viewVRButton) {
+              navigator.xr.isSessionSupported('immersive-vr').then((supported) => {
+                vrSupported = supported;
+                if (supported) {
+                  viewVRButton.classList.remove('disabled');
+                  showDinosaurVRButton.classList.remove('hidden');
+                } else {
+                  let errorMessage = document.createElement('p');
+                  errorMessage.innerText = 'Your browser supports WebXR, but Virtual Reality is not available';
+                  viewVRButton.appendChild(errorMessage);
+                }
               });
             }
 
-            break;
-        }
-      }
-
-      SetStateChangeCallback((state) => {
-        if (state.dinosaur) {
-          appState.dinosaur = state.dinosaur;
-          history.replaceState(appState, null, null);
-        }
-
-        if (state.xrSessionStarted) {
-          appState.inXR = true;
-          document.body.classList.add('xr');
-          document.body.classList.add(appState.viewMode == VIEW_MODE.AR ? 'ar' : 'vr');
-        }
-
-        if (state.xrSessionEnded) {
-          appState.inXR = false;
-          document.body.classList.remove('xr');
-          document.body.classList.remove('ar');
-          document.body.classList.remove('vr');
-          if (appState.viewMode == VIEW_MODE.AR) {
-            appState.screen = SCREEN.Select;
-          } else if (appState.viewMode == VIEW_MODE.VR) {
-            appState.viewMode = VIEW_MODE.Flat;
-          }
-          updateAppState(false);
-          history.replaceState(appState, null, null);
-        }
-      });
-
-      window.addEventListener("popstate", function(e) {
-        appState = e.state;
-        updateAppState(false);
-      });
-
-      closeSelectionButton.addEventListener('click', () => {
-        appState.screen = SCREEN.Home;
-        updateAppState();
-      });
-
-      showSelectionButton.addEventListener('click', () => {
-        appState.screen = SCREEN.Select;
-        updateAppState();
-      });
-
-      view2DButton.addEventListener('click', () => {
-        appState.screen = SCREEN.Select;
-        appState.viewMode = VIEW_MODE.Flat;
-        updateAppState();
-      });
-
-      function startVR() {
-        if (!vrSupported) return;
-        if (appState.inXR) {
-          EndXRSession();
-          return;
-        }
-        appState.screen = SCREEN.View;
-        appState.viewMode = VIEW_MODE.VR;
-        updateAppState();
-      }
-
-      viewVRButton.addEventListener('click', startVR);
-      showDinosaurVRButton.addEventListener('click', startVR);
-
-      function startAR() {
-        if (!arSupported) return;
-        if (appState.inXR) {
-          EndXRSession();
-          return;
-        }
-        appState.screen = SCREEN.View;
-        appState.viewMode = VIEW_MODE.AR;
-        updateAppState();
-      }
-
-      viewARButton.addEventListener('click', () => {
-        if (!arSupported) return;
-
-        appState.screen = SCREEN.Select;
-        appState.viewMode = VIEW_MODE.AR;
-        updateAppState();
-      });
-      showDinosaurARButton.addEventListener('click', startAR);
-
-      // Wire up each of the dinosaur selection options
-      let dinosaurOptions = document.querySelectorAll('#dinosaurList>li');
-      for (let dinosaur of dinosaurOptions) {
-        let dinosaurType = dinosaur.getAttribute('data-dinosaur');
-        dinosaur.addEventListener('click', () => {
-          appState.screen = SCREEN.View;
-          appState.dinosaur = dinosaurType;
-          updateAppState();
-        });
-      }
-
-      // Check to see if WebXR is available
-      if ( 'xr' in navigator ) {
-        if (viewVRButton) {
-          navigator.xr.isSessionSupported('immersive-vr').then((supported) => {
-            vrSupported = supported;
-            if (supported) {
-              viewVRButton.classList.remove('disabled');
-              showDinosaurVRButton.classList.remove('hidden');
-            } else {
+            if (viewARButton) {
+              if (appState.debug) {
+                viewARButton.classList.remove('disabled');
+                showDinosaurARButton.classList.remove('hidden');
+              }
+              navigator.xr.isSessionSupported('immersive-ar').then((supported) => {
+                arSupported = supported;
+                if (supported) {
+                  viewARButton.classList.remove('disabled');
+                  showDinosaurARButton.classList.remove('hidden');
+                } else {
+                  let errorMessage = document.createElement('p');
+                  errorMessage.innerText = 'Your browser supports WebXR, but Augmented Reality is not available';
+                  viewARButton.appendChild(errorMessage);
+                }
+              });
+            }
+          } else {
+            if (viewVRButton) {
               let errorMessage = document.createElement('p');
-              errorMessage.innerText = 'Your browser supports WebXR, but Virtual Reality is not available';
+              errorMessage.innerText = 'Your browser does not support WebXR';
               viewVRButton.appendChild(errorMessage);
             }
-          });
-        }
 
-        if (viewARButton) {
-          if (appState.debug) {
-            viewARButton.classList.remove('disabled');
-            showDinosaurARButton.classList.remove('hidden');
-          }
-          navigator.xr.isSessionSupported('immersive-ar').then((supported) => {
-            arSupported = supported;
-            if (supported) {
-              viewARButton.classList.remove('disabled');
-              showDinosaurARButton.classList.remove('hidden');
-            } else {
+            if (viewARButton) {
               let errorMessage = document.createElement('p');
-              errorMessage.innerText = 'Your browser supports WebXR, but Augmented Reality is not available';
+              errorMessage.innerText = 'Your browser does not support WebXR';
               viewARButton.appendChild(errorMessage);
             }
-          });
-        }
-      } else {
-        if (viewVRButton) {
-          let errorMessage = document.createElement('p');
-          errorMessage.innerText = 'Your browser does not support WebXR';
-          viewVRButton.appendChild(errorMessage);
-        }
+          }
 
-        if (viewARButton) {
-          let errorMessage = document.createElement('p');
-          errorMessage.innerText = 'Your browser does not support WebXR';
-          viewARButton.appendChild(errorMessage);
-        }
-      }
-
-      // Begin loading the app
-      // The timeout is to give the main page a chance to update before we kick
-      // of a fairly heavy preload process.
-      setTimeout(() => {
-        PreloadDinosaurApp(appState.debug).then(() => {
+          // Begin loading the app
+          // The timeout is to give the main page a chance to update before we kick
+          // of a fairly heavy preload process.
+          //setTimeout(() => {
+          //PreloadDinosaurApp(appState.debug).then(() => {
           // When the app's primary resources are ready to display, show the
           // main menu buttons.
           mainElement.classList.remove('loading');
           containerElement.classList.remove('loading');
-        });
-      }, 100);
-    </script>
-  </body>
-</html>
+          //});
+          //}, 100);
+          </script>
+        </body>
+        </html>

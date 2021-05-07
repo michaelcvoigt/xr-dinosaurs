@@ -40,7 +40,7 @@ function trimEmptyLeadingKeyframes(animation) {
       }
     }
   }
-  
+
   // If the animation start time was greater than zero adjust all
   // track times (and the animation duration) to re-root the animation
   // at 0.
@@ -60,9 +60,12 @@ export class XRDinosaurLoader {
 
     this._loadedDinosaurs = {};
   }
+  
+  load(key)
+  {
 
-  load(key) {
     let dinosaur = AllDinosaurs[key];
+
     if (!dinosaur) {
       return Promise.reject(new Error('Invalid key'));
     }

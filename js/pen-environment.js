@@ -44,6 +44,8 @@ export class PenEnvironment extends THREE.Group {
         let raisedPlatform = null;
         gltf.scene.traverse((child) => {
           if (child.isMesh) {
+
+            child.position.set(2,0,-5);
             // Replace the MeshStandardMaterial for the pen with something cheaper
             // to render, because we don't have proper physical materials for this
             // model.
