@@ -52,15 +52,15 @@ function trimEmptyLeadingKeyframes(animation) {
   }
 }
 
-export class XRDinosaurLoader {
+export class XRDinosaurLoader
+{
   constructor(gltfLoader) {
     this._gltfLoader = gltfLoader;
     this._currentKey = null;
     this._currentDinosaur = null;
-
     this._loadedDinosaurs = {};
   }
-  
+
   load(key)
   {
 
@@ -86,7 +86,8 @@ export class XRDinosaurLoader {
       });
     }
 
-    this._loadedDinosaurs[key] = new Promise((resolve) => {
+    this._loadedDinosaurs[key] = new Promise((resolve) =>
+    {
       this._gltfLoader.setPath(dinosaur.path);
       let fileName = dinosaur.file || 'scene.gltf';
       this._gltfLoader.load(fileName, (gltf) => {
@@ -97,6 +98,9 @@ export class XRDinosaurLoader {
 
         // Position feet on the ground
         gltf.scene.position.y -= bbox.min.y * modelScale;
+
+        dinosaur.castShadow = true;
+        dinosaur.receiveShadow = true;
 
         dinosaur.add(gltf.scene);
 

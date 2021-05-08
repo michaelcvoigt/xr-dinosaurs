@@ -24,7 +24,8 @@ const PLATFORM_SPEED = 0.5; // Meters/second
 const MAX_PLATFORM_HEIGHT = 5;
 const PLATFORM_MOVE_INCREMENT = MAX_PLATFORM_HEIGHT / 2;
 
-export class PenEnvironment extends THREE.Group {
+export class PenEnvironment extends THREE.Group
+{
   constructor(gltfLoader) {
     super();
 
@@ -34,29 +35,43 @@ export class PenEnvironment extends THREE.Group {
 
     this._navigationMeshes = [];
 
-    this._platformTargetHeight = 0;
+    //this._platformTargetHeight = 0;
 
-    this._loadedPromise = new Promise((resolve) => {
+    this._loadedPromise = new Promise((resolve) =>
+    {
       gltfLoader.setPath('media/models/environment/');
-      gltfLoader.load('compressed-optimized.glb', (gltf) => {
+      gltfLoader.load('compressed-optimized.glb', (gltf) =>
+      {
         gltf.scene.updateMatrixWorld();
 
-        let raisedPlatform = null;
-        gltf.scene.traverse((child) => {
-          if (child.isMesh) {
+        //let raisedPlatform = null;
 
+        gltf.scene.traverse((child) =>
+        {
+          if (child.isMesh)
+          {
             child.position.set(2,0,-5);
+            //child.scale.set(2.25,2.25,2.25);
+
+            child.receiveShadow = true;
+
             // Replace the MeshStandardMaterial for the pen with something cheaper
             // to render, because we don't have proper physical materials for this
             // model.
+
             let newMaterial = new THREE.MeshLambertMaterial({
               map: child.material.map,
               alphaMap: child.material.alphaMap,
               transparent: child.material.transparent,
               side: child.material.side,
             });
+            newMaterial.shininess = 66;
+            newMaterial.metalness = 0.88; 
             child.material = newMaterial;
+
+
           }
+          /*
           if (child.name == 'Raised_Platform') {
             raisedPlatform = child;
             this._navigationMeshes.push(child);
@@ -64,14 +79,16 @@ export class PenEnvironment extends THREE.Group {
           if (child.name == 'Ground') {
             this._navigationMeshes.push(child);
           }
+          */
         });
-
+        /*
         if (raisedPlatform) {
           let raisedPlatformTransform = raisedPlatform.parent.matrixWorld;
           raisedPlatform.parent.remove(raisedPlatform);
           raisedPlatform.applyMatrix4(raisedPlatformTransform);
           this._platform.add(raisedPlatform);
         }
+        */
 
         this.add(gltf.scene);
         resolve(this);
@@ -120,7 +137,8 @@ export class PenEnvironment extends THREE.Group {
     this._platform.position.y = 0;
   }
 
-  update(delta) {
+  update(delta)
+  {
     // Update the platform height if needed
     if (this._platform.position.y < this._platformTargetHeight) {
       this._platform.position.y += PLATFORM_SPEED * delta;

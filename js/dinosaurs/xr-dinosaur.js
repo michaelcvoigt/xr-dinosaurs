@@ -1,22 +1,4 @@
-// Copyright 2019 Brandon Jones
-//
-// Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this software and associated documentation files (the "Software"), to deal
-// in the Software without restriction, including without limitation the rights
-// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-// copies of the Software, and to permit persons to whom the Software is
-// furnished to do so, subject to the following conditions:
-
-// The above copyright notice and this permission notice shall be included in
-// all copies or substantial portions of the Software.
-
-// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-// SOFTWARE.
+import * as APP from '../dinosaur-app.js';
 
 import * as THREE from '../third-party/three.js/build/three.module.js';
 
@@ -32,7 +14,6 @@ export class XRDinosaur extends THREE.Object3D {
 
     this._scared = false;
     this._center = new THREE.Vector3();
-    this._shadowNodes = null;
     this._mixer = new THREE.AnimationMixer(this);
     this._actions = {};
     this._currentAction = null;
@@ -41,8 +22,6 @@ export class XRDinosaur extends THREE.Object3D {
     // Classes that extend XRDinosaur should override these values
     this.path = '';
     this.file = 'compressed.glb';
-    this.shadowNodeNames = [];
-    this.shadowSize = 3;
     this.animationSequence = DEFAULT_ANIMATION_SEQUENCE;
     this.buttonAtlasOffset = [0, 0];
 
@@ -50,7 +29,9 @@ export class XRDinosaur extends THREE.Object3D {
     this.position.fromArray(DEFAULT_POSITION);
     this.rotation.y = DEFAULT_ORIENTATION;
     this.greeting = "";
-  
+
+    this.castShadow = true;
+    this.receiveShadow = true;
 
   }
 
@@ -107,7 +88,8 @@ alert(animationSequence[0]);
     */
   }
 
-  set envMap(value) {
+  set envMap(value)
+  {
     this._envMap = value;
     this.traverse((child) => {
       if (child.isMesh) {
@@ -119,24 +101,11 @@ alert(animationSequence[0]);
 
   scare() {
     if (this._scared) { return; }
+
     this._scared = true;
 
-    this._currentAction.crossFadeTo(this._actions.Die, 0.25);
-    this._currentAction = this._actions.Die;
-    this._actions.Die.play();
-  }
+    APP.PlayAnimation("bounce");
 
-  get shadowNodes() {
-    if (!this._shadowNodes) {
-      this._shadowNodes = [];
-      this.traverse((child) => {
-        if (this.shadowNodeNames &&
-            this.shadowNodeNames.includes(child.name)) {
-          this._shadowNodes.push(child);
-        }
-      });
-    }
-    return this._shadowNodes;
   }
 
   update(delta) {

@@ -58,15 +58,18 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
         <div></div><div></div><div></div><div></div>
       </div>
       <ul class='menu main-menu'>
-        <li id='view2DButton'>
-          See the Robots in your Browser.
-        </li>
         <li class='disabled' id='viewVRButton'>
-          Visit our Robots in Virtual Reality.
+          Oculus & Vive : Visit in Virtual Reality.
         </li>
+
+        <li id='view2DButton'>
+          Computer or Phone : Visit in a browser window.
+        </li>
+
         <li class='disabled' id='viewARButton'>
-          Bring a Robots home with Augmented Reality.
+          Hololens & Magic Leap : Visit in Augmented Reality.
         </li>
+
       </ul>
     </main>
 
@@ -80,29 +83,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
         <option value='0.0625'>1:16 - Toy Size</option>
       </select>
     </div>
-    <ul id='dinosaurList' class='menu'>
-      <li data-dinosaur='robot_0'>
-        Robot 0
-        <p>Cute robot to look at.</p>
-      </li>
-      <li data-dinosaur='robot_1'>
-        Robot 1
-        <p>Cute robot to look at.</p>
-        </li>
-        <li data-dinosaur='robot_2'>
-          Robot 2
-          <p>Cute robot to look at.</p>
-          </li>
-          <li data-dinosaur='robot_3'>
-            Robot 3
-            <p>Cute robot to look at.</p>
-            </li>
-            <li data-dinosaur='parasaurolophus'>
-              Parasaurolophus
-              <p>Cute robot to look at.</p>
-              </li>
 
-            </ul>
           </article>
 
           <article id='canvasContainer' class='hidden loading'>
@@ -257,18 +238,20 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
             updateAppState(false);
           });
 
-          closeSelectionButton.addEventListener('click', () => {
+          closeSelectionButton.addEventListener('click', () =>
+          {
             appState.screen = SCREEN.Home;
             updateAppState();
           });
 
           showSelectionButton.addEventListener('click', () => {
-            appState.screen = SCREEN.Select;
+            appState.screen = SCREEN.Home;
             updateAppState();
           });
 
-          view2DButton.addEventListener('click', () => {
-            appState.screen = SCREEN.Select;
+          view2DButton.addEventListener('click', () =>
+          {
+            appState.screen = SCREEN.View;
             appState.viewMode = VIEW_MODE.Flat;
             updateAppState();
           });

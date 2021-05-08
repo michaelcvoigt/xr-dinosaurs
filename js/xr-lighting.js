@@ -24,7 +24,8 @@ import { RGBELoader } from './third-party/three.js/examples/jsm/loaders/RGBELoad
 const LIGHT_PROBE_INTENSITY = 3;
 const REFLECTION_UPDATE_RATE = 1000; // ms
 
-export class XRLighting extends THREE.Group {
+export class XRLighting extends THREE.Group
+{
   constructor(renderer) {
     super();
 
@@ -48,7 +49,9 @@ export class XRLighting extends THREE.Group {
     this._xrFrameCallback = (time, xrFrame) => { this.onXRFrame(time, xrFrame); };
   }
 
-  loadHDRSkybox(url) {
+  loadHDRSkybox(url)
+  {
+    /*
     this._pmremGenerator.compileEquirectangularShader();
 
     return new Promise((resolve) => {
@@ -62,9 +65,11 @@ export class XRLighting extends THREE.Group {
         resolve(this._envMap);
       });
     });
+    */
   }
 
-  get envMap() {
+  get envMap()
+  {
     return this._xrEnvMap ? this._xrEnvMap : this._envMap;
   }
 
@@ -113,7 +118,8 @@ export class XRLighting extends THREE.Group {
     return this._xrSession;
   }
 
-  onXRFrame(time, xrFrame) {
+  onXRFrame(time, xrFrame)
+  {
     this._xrSession.requestAnimationFrame(this._xrFrameCallback);
 
     if (xrFrame.worldInformation && xrFrame.worldInformation.lightEstimation) {
@@ -128,12 +134,12 @@ export class XRLighting extends THREE.Group {
 
           this.remove(this._hemisphereLight);
         }
-        
+
         if (!this._xrDirectionalLight) {
           this._xrDirectionalLight = new THREE.DirectionalLight();
           this.add(this._xrDirectionalLight);
         }
-        
+
         this._xrLightProbe.sh.fromArray(lightProbe.sphericalHarmonics.coefficients);
 
         let intensityScalar = Math.max(1.0,

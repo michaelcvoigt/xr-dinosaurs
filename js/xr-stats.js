@@ -32,7 +32,8 @@ const MAX_CHARACTERS = 6;
 
 const now = (window.performance && performance.now) ? performance.now.bind(performance) : Date.now;
 
-function segmentToX(i) {
+function segmentToX(i)
+{
   return ((0.9/SEGMENTS) * i) - 0.45;
 }
 
