@@ -39,7 +39,9 @@ import {
 import * as EMOJI from './xr-emoji.js';
 import * as UI from './robots-ui.js';
 
-//import { XRLighting } from './xr-lighting.js';
+import {
+  XRLighting
+} from './xr-lighting.js';
 //import { XRStats } from './xr-stats.js';
 
 // Third Party Imports
@@ -99,82 +101,15 @@ let stateCallback = null;
 let caption = null;
 let StoryIndex = 0;
 let RobotStoriesArray = new Array("robot_0", "robot_1", "robot_2", "robot_3");
+let mountedUIToHand = false;
 
 let textureLoader = new THREE.TextureLoader();
 let audioLoader = new THREE.AudioLoader();
 let clock = new THREE.Clock();
-
 let listener = new THREE.AudioListener();
 let ambientSounds, hornSound, fileSound
 
 let locomotionManager;
-
-let screenshotList;
-let takeScreenshot = false;
-
-let debugEnabled = false;
-let debugSettings = {
-  drawSkybox: true,
-  drawEnvironment: true,
-  drawDinosaur: true,
-  drawShadows: true,
-  drawButtons: true,
-  animate: true,
-
-  screenshot: () => {
-    screenshot();
-  },
-  scare: () => {
-    scare();
-  },
-  raisePlatform: () => {
-    environment.raisePlatform();
-  },
-  lowerPlatform: () => {
-    environment.lowerPlatform();
-  }
-};
-
-function screenshot() {
-  if (!screenshotList) {
-    screenshotList = document.createElement('div');
-    screenshotList.classList.add('screenshot-list');
-    document.body.appendChild(screenshotList);
-  }
-  takeScreenshot = true;
-}
-
-function initDebugUI() {
-
-  let gui = new dat.GUI();
-
-  let actionFolder = gui.addFolder('Actions');
-  actionFolder.add(debugSettings, 'scare');
-  actionFolder.add(debugSettings, 'screenshot');
-  actionFolder.add(debugSettings, 'raisePlatform');
-  actionFolder.add(debugSettings, 'lowerPlatform');
-
-  let guiRenderingFolder = gui.addFolder('Rendering Options');
-  guiRenderingFolder.add(debugSettings, 'drawSkybox').onFinishChange(() => {
-    if (debugSettings.drawSkybox) {
-      scene.background = xrLighting.envMap;
-    } else {
-      scene.background = null;
-    }
-  });
-  guiRenderingFolder.add(debugSettings, 'drawEnvironment').onFinishChange(() => {
-    environment.visible = debugSettings.drawEnvironment;
-  });
-  guiRenderingFolder.add(debugSettings, 'drawDinosaur').onFinishChange(() => {
-    xrDinosaur.visible = debugSettings.drawDinosaur;
-  });
-  guiRenderingFolder.add(debugSettings, 'drawButtons').onFinishChange(() => {
-    buttonGroup.visible = debugSettings.drawButtons;
-  });
-  guiRenderingFolder.add(debugSettings, 'animate');
-
-  document.body.appendChild(gui.domElement);
-}
 
 function initControllers() {
   if (controllers.length) {
@@ -216,7 +151,7 @@ function initControllers() {
     locomotionManager.watchController(targetRay);
     locomotionManager.add(targetRay);
     locomotionManager.add(grip);
-    //model.setEnvironmentMap(xrLighting.envMap);
+    model.setEnvironmentMap(xrLighting.envMap);
     return {
       targetRay,
       grip,
@@ -254,12 +189,23 @@ export function AddObjectToScene(obj) {
   scene.add(obj);
 }
 
+let loadingDiv = document.getElementById('loadingDiv');
+
+function LoadingDivVisible(show) {
+  if(show){
+    loadingDiv.style.display = 'block';
+  }else{
+    loadingDiv.style.display = 'none';
+  }
+}
+
 export function PreloadDinosaurApp(debug = false) {
+
+  LoadingDivVisible(true);
+
   if (preloadPromise) {
     return preloadPromise;
   }
-
-  debugEnabled = debug;
 
   scene = new THREE.Scene();
 
@@ -283,7 +229,6 @@ export function PreloadDinosaurApp(debug = false) {
 
   buttonManager = new XRButtonManager();
   buttonGroup = new THREE.Group();
-  environment.platform.add(buttonGroup);
 
   cursorManager = new XRInputCursorManager();
   scene.add(cursorManager);
@@ -296,10 +241,10 @@ export function PreloadDinosaurApp(debug = false) {
     endSelectDestinationCallback: onEndSelectDestination,
     navigationMeshes: environment.navigationMeshes
   });
-  environment.platform.add(locomotionManager);
+  environment.add(locomotionManager);
 
   camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.25, 100);
-  camera.position.set(0, 5.0, 5.0);
+  camera.position.set(0, 0, 5.0);
   camera.add(listener);
   locomotionManager.add(camera);
 
@@ -328,44 +273,23 @@ export function PreloadDinosaurApp(debug = false) {
   renderer.xr.enabled = true;
   renderer.shadowMap.enabled = true;
 
+  animate();
+
   // This is useful when debugging, but can cause massive blocking operations
   // on the main thread so turn it off for "real" work.
   //renderer.debug.checkShaderErrors = debugEnabled;
 
-  //xrLighting = new XRLighting(renderer);
-  //scene.add(xrLighting);
+  xrLighting = new XRLighting(renderer);
+  scene.add(xrLighting);
 
   window.addEventListener('resize', onWindowResize, false);
 
   controls = new OrbitControls(camera, renderer.domElement);
   controls.target.set(0, 1, -4);
-  if (!debugEnabled) {
-    controls.maxDistance = 30;
-    controls.maxPolarAngle = Math.PI * 0.49;
-  }
   controls.update();
-
-  //stats = new XRStats(renderer);
-  //if (!debugEnabled) {
-  //stats.drawOrthographic = false;
-  //}
 
   renderer.xr.addEventListener('sessionstart', async () => {
     initControllers();
-
-    if (!debugEnabled) {
-      buttonGroup.visible = true;
-    }
-
-    if (stats) {
-      stats.drawOrthographic = false;
-      stats.scale.set(0.1, 0.1, 0.1);
-      stats.position.set(0, -0.07, 0);
-      stats.rotation.set(Math.PI * -0.5, Math.PI, 0);
-      scene.remove(stats);
-      controllers[0].grip.add(stats);
-    }
-
     if (xrMode == 'immersive-ar') {
       // Stop rendering the environment in AR mode
       scene.background = null;
@@ -430,44 +354,48 @@ export function PreloadDinosaurApp(debug = false) {
       ambientSounds.stop();
     }
 
-    if (!debugEnabled) {
-      buttonGroup.visible = false;
-    }
-    environment.resetPlatform();
-
-    if (stats && debugEnabled) {
-      stats.drawOrthographic = true;
-    }
-
     environment.visible = debugSettings.drawEnvironment;
-    buttonGroup.visible = debugSettings.drawButtons;
 
     OnAppStateChange({
       xrSessionEnded: true
     });
   });
 
-  /*
-	xrLighting.addEventListener('envmapchange', () => {
-	// When exiting AR mode we need to re-enable the environment rendering
-	if (xrMode != 'immersive-ar' && debugSettings.drawSkybox) {
-	scene.background = xrLighting.envMap;
-} else {
-scene.background = null;
+
+  xrLighting.addEventListener('envmapchange', () => {
+    // When exiting AR mode we need to re-enable the environment rendering
+    if (xrMode != 'immersive-ar' && debugSettings.drawSkybox) {
+      scene.background = xrLighting.envMap;
+    } else {
+      scene.background = null;
+    }
+
+    if (xrDinosaur) {
+      xrDinosaur.envMap = xrLighting.envMap;
+    }
+
+    for (let controller of controllers) {
+      controller.model.setEnvironmentMap(xrLighting.envMap);
+    }
+  });
+
+
+  preloadPromise = xrLighting.loadHDRSkybox('media/textures/equirectangular/misty_pines_2k.hdr');
+  return preloadPromise;
 }
 
-if (xrDinosaur) {
-xrDinosaur.envMap = xrLighting.envMap;
-}
+function setCameraPosition(positionY) {
 
-for (let controller of controllers) {
-controller.model.setEnvironmentMap(xrLighting.envMap);
-}
-});
-*/
+  //camera.position.set(0, 5.0, 5.0);
+  var locationToMoveTo = new THREE.Vector3(0, positionY, 5.0);
+  var duration = 1.5;
 
-  //preloadPromise = xrLighting.loadHDRSkybox('media/textures/equirectangular/misty_pines_2k.hdr');
-  //return preloadPromise;
+  TWEEN.removeAll();
+  var tween = new TWEEN.Tween(camera.position)
+    .to(locationToMoveTo, duration)
+    .start()
+    .end()
+    requestAnimationFrame(animate);
 }
 
 export function RunDinosaurApp(container, options = {}) {
@@ -475,11 +403,6 @@ export function RunDinosaurApp(container, options = {}) {
     // Ensure the app content has been loaded (will early terminate if already
     // called).
     PreloadDinosaurApp();
-
-    // Build out some final bits of UI
-    if (debugEnabled) {
-      initDebugUI();
-    }
 
     // Attach the main WebGL canvas and supporting UI to the page
     container.appendChild(renderer.domElement);
@@ -501,10 +424,10 @@ export function RunDinosaurApp(container, options = {}) {
     scene.add(light);
 
     //if (options.xrSessionMode === 'immersive-VR') {
-      UI.buildVRPanel();
+    UI.buildVRPanel();
     //}else{
-			//UI.build2DPanel();
-		//}
+    //UI.build2DPanel();
+    //}
     appRunning = true;
   }
 
@@ -557,138 +480,61 @@ function StartXRSession(mode) {
 
 }
 
-/*
-function buildButtons()
-{
-
-	if (navigator.xr)
-	{
-		navigator.xr.isSessionSupported('immersive-vr')
-		.then((isSupported) => {
-			if (isSupported)
-			{
-				loadModel(RobotStoriesArray[StoryIndex]);
-			}
-	});
-}
-*/
-/*
-	if (!debugEnabled) {
-		buttonGroup.visible = false;
-	}
-
-	buttonGroup.position.y = targetButtonGroupHeight = 0.6;
-	buttonGroup.position.z = -0.9;
-	buttonGroup.rotation.x = Math.PI * 0.3;
-
-	let x = LEFT_BUTTON_X;
-	let y = 0;
-	let z = -BUTTON_SPACING * 0.5;
-	let idx = 0;
-	for (let i in xrDinosaurLoader.allDinosaurs) {
-		let dino = xrDinosaurLoader.allDinosaurs[i];
-		if (dino.debugOnly) { continue; }
-
-		let button = buttonManager.createButton({
-			imageUrl: `media/textures/button-atlas.png`,
-			imageOffset: dino.buttonAtlasOffset ? dino.buttonAtlasOffset : [0, 0],
-			title: dino.name,
-			onClick: () => {
-				loadModel(i);
-			},
-		});
-		button.position.set(x, y, z);
-		idx++;
-		if (idx % ROW_LENGTH == 0) {
-			x = LEFT_BUTTON_X;
-			z += BUTTON_SPACING;
-		} else {
-			x += BUTTON_SPACING;
-		}
-		buttonGroup.add(button);
-
-	}
-
-	let hornButton = buttonManager.createButton({
-		imageUrl: `media/textures/button-atlas.png`,
-		imageOffset: [0.75, 0.5],
-		title: "Airhorn",
-		onClick: () => {
-			scare();
-		},
-	});
-	hornButton.scale.multiplyScalar(1.1);
-	hornButton.position.copy(HORN_BUTTON_POSITION);
-	buttonGroup.add(hornButton);
-
-	let upButton = buttonManager.createButton({
-		imageUrl: `media/textures/button-atlas.png`,
-		imageOffset: [0.25, 0.5],
-		title: "Raise Platform",
-		onClick: () => {
-			environment.raisePlatform();
-		},
-	});
-	upButton.position.copy(UP_BUTTON_POSITION);
-	buttonGroup.add(upButton);
-
-	let downButton = buttonManager.createButton({
-		imageUrl: `media/textures/button-atlas.png`,
-		imageOffset: [0.5, 0.5],
-		title: "Lower Platform",
-		onClick: () => {
-			environment.lowerPlatform();
-		},
-	});
-	downButton.position.copy(DOWN_BUTTON_POSITION);
-	buttonGroup.add(downButton);
-
-	// "Glass" pedestal
-	let glassGeometry = new THREE.BoxBufferGeometry(1.8, 0.05, 0.5);
-	let glassMaterial = new THREE.MeshLambertMaterial({
-		color: 0xAACCFF,
-		transparent: true,
-		opacity: 0.3,
-	});
-	let glassMesh = new THREE.Mesh(glassGeometry, glassMaterial);
-	glassMesh.position.y = -0.05;
-	buttonGroup.add(glassMesh);
-
-}
-*/
-
-function makeLabelCanvas(size, name) {
+function makeNamePlate(size, name) {
   const borderSize = 10;
-  const ctx = document.createElement('canvas').getContext('2d');
+
+  let canvas = document.createElement('canvas');
+  canvas.id = "nameplate";
+  canvas.width = 768;
+  canvas.height = 64;
+
+  const context = document.createElement('canvas').getContext('2d');
+
   const font = `${size}px bold sans-serif`;
-  ctx.font = font;
+
+  context.font = font;
 
   // measure how long the name will be
-  const textWidth = ctx.measureText(name).width;
-
+  const textWidth = context.measureText(name).width;
   const doubleBorderSize = borderSize * 2;
 
   const width = (textWidth + doubleBorderSize);
   const height = (size + doubleBorderSize);
 
-  ctx.canvas.width = width;
-  ctx.canvas.height = height;
+  context.canvas.width = width;
+  context.canvas.height = height;
 
   // need to set font again after resizing canvas
-  ctx.font = font;
-  ctx.textBaseline = 'middle';
-  ctx.textAlign = 'center';
+  context.font = font;
+  context.textBaseline = 'middle';
+  context.textAlign = 'center';
 
-  ctx.fillStyle = 'black';
-  ctx.fillRect(0, 0, width, height);
+  // Set rectangle and corner values
+  var rectX = 0;
+  var rectY = 0;
+  var rectWidth = width;
+  var rectHeight = height;
+  var cornerRadius = 40;
+
+
+  // Set faux rounded corners
+  context.lineJoin = "round";
+  context.lineWidth = cornerRadius;
+  context.fillStyle = 'black';
+
+  // Change origin and dimensions to match true size (a stroke makes the shape a bit larger)
+  context.strokeRect(rectX + (cornerRadius / 2), rectY + (cornerRadius / 2), rectWidth - cornerRadius, rectHeight - cornerRadius);
+  context.fillRect(rectX + (cornerRadius / 2), rectY + (cornerRadius / 2), rectWidth - cornerRadius, rectHeight - cornerRadius);
+
+  //context.fillRect(0, 0, width, height);
   // scale to fit but don't stretch
-  //const scaleFactor = Math.min(1,textWidth);
-  ctx.translate(width / 2, height / 2);
-  ctx.scale(1, 1);
-  ctx.fillStyle = 'white';
-  ctx.fillText(name, 0, 0);
+  const scaleFactor = Math.min(1, textWidth);
+  context.translate(width / 2, height / 2);
+  context.scale(1, 1);
+  context.fillStyle = 'white';
+  context.fillText(name, 0, 0);
 
-  return ctx.canvas;
+  return context.canvas;
 }
 
 function PlayAnimation(name) {
@@ -697,6 +543,39 @@ function PlayAnimation(name) {
   currentDinosaur._currentAction = currentDinosaur._mixer.clipAction(clip);
   currentDinosaur._currentAction.loop = THREE.LoopOnce;
   currentDinosaur._currentAction.play();
+}
+
+function MoveTo(locationAndTime) {
+  currentDinosaur._currentAction.stop();
+
+  var array = locationAndTime.split(",");
+  var locationToMoveTo = new THREE.Vector3(array[0], array[1], array[2]);
+  var duration = array[4];
+
+  TWEEN.removeAll();
+  var tween = new TWEEN.Tween(currentDinosaur.position)
+    .to(locationToMoveTo, duration)
+    .onUpdate(function() {
+      //console.log(currentDinosaur.position);
+    })
+    //.easing(TWEEN.Easing.Elastic.InOut)
+    .start()
+    .end()
+    requestAnimationFrame(animate);
+}
+
+function CheckGreetingForMove(message) {
+  var stringMessage = message;
+  var string = stringMessage.substring(0, 6);
+
+  if (string == "<Move>") {
+    var moveTo = message.split('<Move>');
+    MoveTo(moveTo[1]);
+    return true;
+
+  } else {
+    return false;
+  }
 }
 
 function CheckGreetingForAnimation(message) {
@@ -742,15 +621,17 @@ function PlaySound(file) {
 }
 
 function showCaption(message) {
-  caption_timeout = null;
+
+  clearTimeout(caption_timeout);
 
   var stringMessage = message;
   var string = stringMessage.substring(0, 8);
 
   var hasSound = CheckGreetingForSounds(message);
   var hasAnimation = CheckGreetingForAnimation(message);
+  var hasMove = CheckGreetingForMove(message);
 
-  if (hasSound || hasAnimation) {} else {
+  if (hasSound || hasAnimation || hasMove) {} else {
     if (string != "<Silent>") {
       if ('speechSynthesis' in window) {
         // Speech Synthesis supported 🎉
@@ -762,7 +643,7 @@ function showCaption(message) {
       stringMessage = stringMessage.split('<Silent>')[1];
     }
 
-    var canvas = makeLabelCanvas(CAPTION_VR_LABEL_SIZE, stringMessage);
+    var canvas = makeNamePlate(CAPTION_VR_LABEL_SIZE, stringMessage);
     var texture = new THREE.CanvasTexture(canvas);
     // because our canvas is likely not a power of 2
     // in both dimensions set the filtering appropriately.
@@ -783,6 +664,7 @@ function showCaption(message) {
 
     label.scale.set(textWidth, 0.33, 1);
     caption = label;
+
   }
 
   if (hasSound || hasAnimation) {
@@ -794,8 +676,11 @@ function showCaption(message) {
 }
 
 function DestroyCaption() {
-  caption.scale.set(0, 0, 0);
-  scene.remove(caption);
+  clearTimeout(caption_timeout);
+  if (caption) {
+    caption.scale.set(0, 0, 0);
+    scene.remove(caption);
+  }
 
   currentDinosaurIndex++;
 
@@ -807,6 +692,7 @@ function DestroyCaption() {
 }
 
 function GotoNextStory() {
+  clearTimeout(caption_timeout);
   currentDinosaurIndex = 0;
   StoryIndex++;
 
@@ -818,6 +704,7 @@ function GotoNextStory() {
 }
 
 function GotoPrevStory() {
+  clearTimeout(caption_timeout);
   currentDinosaurIndex = 0;
   StoryIndex--;
 
@@ -832,10 +719,15 @@ var currentDinosaur = null;
 var currentDinosaurIndex = 0;
 
 function loadModel(key) {
+
+  LoadingDivVisible(true);
+
   if (xrDinosaur) {
     scene.remove(xrDinosaur);
     xrDinosaur = null;
   }
+
+  setCameraPosition(5);
 
   UI.SetInfoMessage("Intoducing, " + key);
 
@@ -851,13 +743,12 @@ function loadModel(key) {
 
     xrDinosaur = dinosaur;
     //xrDinosaur.envMap = xrLighting.envMap;
-    xrDinosaur.visible = debugSettings.drawDinosaur;
     xrDinosaur.scale.setScalar(dinosaurScale, dinosaurScale, dinosaurScale);
     currentDinosaur = xrDinosaur;
     currentDinosaurIndex = 0;
 
     if (xrDinosaur.greeting.length > 0) {
-      setTimeout(showCaption, 1500, xrDinosaur.greeting[currentDinosaurIndex]);
+      caption_timeout = setTimeout(showCaption, 1500, xrDinosaur.greeting[currentDinosaurIndex]);
     }
 
     // Ensure the dinosaur's shaders are ready to use before we add it to the
@@ -868,6 +759,8 @@ function loadModel(key) {
 
     controls.target.copy(xrDinosaur.center);
     controls.update();
+
+    LoadingDivVisible(false);
 
     OnAppStateChange({
       dinosaur: key
@@ -905,8 +798,8 @@ function onWindowResize() {
 }
 
 function render(time, xrFrame) {
-  let delta = clock.getDelta();
 
+  let delta = clock.getDelta();
   if (xrDinosaur) {
     if (placementMode && hitTestSource) {
       let pose = null;
@@ -921,15 +814,22 @@ function render(time, xrFrame) {
       } else {
         xrDinosaur.visible = false;
       }
-    } else if (debugSettings.animate) {
-      xrDinosaur.update(delta);
     }
+    xrDinosaur.update(delta);
   }
 
   if (UI.ui && renderer.xr.isPresenting) UI.ui.update();
 
+  if (controllers[1] != undefined && mountedUIToHand == false) {
+    mountedUIToHand = true;
+    UI.ParentToHand(controllers[1].grip);
+
+    //let leftHandPosition = viewerProxy.getWorldPosition(controllers[1].grip.position);
+    //UI.UpdateUIPosition(viewerProxy);
+  }
+
   if (xrMode != 'immersive-ar') {
-    environment.update(delta);
+    //environment.update(delta);
 
     // Update the button height to always stay within a reasonable range of the user's head
     if (renderer.xr.isPresenting && buttonGroup) {
@@ -958,26 +858,15 @@ function render(time, xrFrame) {
   }
 
   locomotionManager.update(renderer, camera);
-
-  if (takeScreenshot) {
-    renderer.setPixelRatio(window.devicePixelRatio * 2);
-  }
-
   renderer.render(scene, camera);
 
-  if (takeScreenshot) {
-    let img = new Image();
-    img.src = renderer.domElement.toDataURL();
-    img.classList.add('screenshot');
-    screenshotList.appendChild(img);
-    renderer.setPixelRatio(window.devicePixelRatio);
-    takeScreenshot = false;
-  }
+}
 
-  if (stats) {
-    stats.update();
-  }
-
+// animate
+function animate() {
+    requestAnimationFrame(animate);
+    TWEEN.update();
+    render();
 }
 
 export {
@@ -985,5 +874,8 @@ export {
   GotoNextStory,
   GotoPrevStory,
   scare,
-  PlayAnimation
+  PlayAnimation,
+  scene,
+  camera,
+  setCameraPosition,
 };

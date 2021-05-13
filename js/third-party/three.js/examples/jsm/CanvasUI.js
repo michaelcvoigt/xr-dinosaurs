@@ -43,6 +43,7 @@ class CanvasUI {
       width: 512,
       height: 512,
       opacity: 1.0,
+
       body: {
         fontFamily: 'Arial',
         fontSize: 30,
@@ -62,7 +63,8 @@ class CanvasUI {
       size: 30,
       padding: 20,
       fontColor: '#fff',
-      borderRadius: 6
+      borderRadius: 6,
+
     };
 
     const body = this.config.body;
@@ -70,7 +72,7 @@ class CanvasUI {
     if (body.fontFamily === undefined) body.fontFamily = "Arial";
     if (body.padding === undefined) body.padding = 20;
     if (body.fontSize === undefined) body.fontSize = 30;
-    if (body.backgroundColor === undefined) body.backgroundColor = 'rgba(0, 0, 0, 0.0)';
+    if (body.backgroundColor === undefined) body.backgroundColor = 'rgba(0, 0, 0, 0)';
     if (body.fontColor === undefined) body.fontColor = '#fff';
 
     Object.entries(this.config).forEach(([name, value]) => {

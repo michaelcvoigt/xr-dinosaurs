@@ -49,7 +49,9 @@ export class XRLocomotionEffectFade extends XRLocomotionEffect {
 
     this.fadeMaterial = new THREE.ShaderMaterial({
       uniforms: {
-        opacity: { value: 0.0 },
+        opacity: {
+          value: 0.0
+        },
       },
 
       transparent: true,
@@ -141,7 +143,9 @@ export class XRLocomotionManager extends THREE.Group {
 
   //onBeforeRender(renderer, scene, camera, geometry, material, group) {
   update(renderer, camera) {
-    if (!this.enabled) { return; }
+    if (!this.enabled) {
+      return;
+    }
 
     // If a transition is in progress finish it before allowing further locomotion
     if (this.transition.active) {
@@ -156,7 +160,9 @@ export class XRLocomotionManager extends THREE.Group {
 
     for (let input of this.inputs) {
       const gamepad = input.inputSource ? input.inputSource.gamepad : null;
-      if(!gamepad) { continue; }
+      if (!gamepad) {
+        continue;
+      }
 
       // TODO: Would be nice to make these more configurable, but for now I'm
       // going to statically map them. Either pressing the touchpad or holding
@@ -173,9 +179,9 @@ export class XRLocomotionManager extends THREE.Group {
           } else if (gamepad.axes.length > 0) {
             // Snap turning if you push the left/right of the touchpad
             if (gamepad.axes[0] < -AXIS_THRESHOLD) {
-              this.rotation.y += Math.PI/4;
+              this.rotation.y += Math.PI / 4;
             } else if (gamepad.axes[0] > AXIS_THRESHOLD) {
-              this.rotation.y -= Math.PI/4;
+              this.rotation.y -= Math.PI / 4;
             }
           }
         }
@@ -201,12 +207,12 @@ export class XRLocomotionManager extends THREE.Group {
       if (gamepad.axes.length > 2) {
         if (gamepad.axes[2] < -AXIS_THRESHOLD) {
           if (input.turnReady) {
-            this.rotation.y += Math.PI/4;
+            this.rotation.y += Math.PI / 4;
             input.turnReady = false;
           }
         } else if (gamepad.axes[2] > AXIS_THRESHOLD) {
           if (input.turnReady) {
-            this.rotation.y -= Math.PI/4;
+            this.rotation.y -= Math.PI / 4;
             input.turnReady = false;
           }
         } else {
@@ -221,7 +227,9 @@ export class XRLocomotionManager extends THREE.Group {
   }
 
   startSelectDestination(input) {
-    if (this.teleportingInput) { return; }
+    if (this.teleportingInput) {
+      return;
+    }
     this.teleportingInput = input;
     this.teleportGuide.visible = true;
     if (this.startSelectDestinationCallback) {
@@ -230,7 +238,9 @@ export class XRLocomotionManager extends THREE.Group {
   }
 
   endSelectDestination(input, renderer, camera) {
-    if (!input || input != this.teleportingInput) { return; }
+    if (!input || input != this.teleportingInput) {
+      return;
+    }
 
     const xrCamera = renderer.xr.getCamera(camera);
     const validDest = this.teleportGuide.getTeleportOffset(OFFSET_VEC, xrCamera);
@@ -264,7 +274,9 @@ export class XRLocomotionManager extends THREE.Group {
   }
 
   endTransition() {
-    if (!this.transition.active) { return; }
+    if (!this.transition.active) {
+      return;
+    }
     this.effect.endEffect(this.position, this.transition.startPos, this.transition.endPos);
     this.remove(this.effect);
     this.transition.active = false;
@@ -314,7 +326,7 @@ const TMP_VEC_D = new THREE.Vector3();
 const UP_VEC = new THREE.Vector3(0, 1, 0);
 
 class TeleportGuideCurve extends THREE.Curve {
-	constructor() {
+  constructor() {
     super();
 
     this.origin = new THREE.Vector3();
@@ -326,7 +338,7 @@ class TeleportGuideCurve extends THREE.Curve {
   guidePointAtTime(outVec, time) {
     outVec.copy(this.origin);
     outVec.addScaledVector(this.velocity, time);
-    outVec.addScaledVector(this.gravity, 0.5*time**2);
+    outVec.addScaledVector(this.gravity, 0.5 * time ** 2);
     return outVec;
   }
 
@@ -359,19 +371,19 @@ export class XRTeleportGuide extends THREE.Group {
     // The guideline is a cross-chaped beam, rendered with a 1D texture fade
     // and additive blending so that it displays well in almost any situation.
     guideUVs.push(
-      0.0, 1.0,  1.0, 1.0,
-      0.0, 1.0,  1.0, 1.0);
+      0.0, 1.0, 1.0, 1.0,
+      0.0, 1.0, 1.0, 1.0);
 
     for (let i = 0; i < this.options.raySegments; ++i) {
-      const t1 = 1.0 - ((i+1) / this.options.raySegments);
+      const t1 = 1.0 - ((i + 1) / this.options.raySegments);
       guideUVs.push(
-        0.0, t1,  1.0, t1,
-        0.0, t1,  1.0, t1);
+        0.0, t1, 1.0, t1,
+        0.0, t1, 1.0, t1);
 
       const o = i * 4; // index offset
       guideIndices.push(
-        0+o, 1+o, 4+o,  1+o, 5+o, 4+o,
-        2+o, 3+o, 6+o,  3+o, 7+o, 6+o
+        0 + o, 1 + o, 4 + o, 1 + o, 5 + o, 4 + o,
+        2 + o, 3 + o, 6 + o, 3 + o, 7 + o, 6 + o
       );
     }
 
@@ -391,9 +403,15 @@ export class XRTeleportGuide extends THREE.Group {
     const guideTexture = new THREE.DataTexture(RAY_TEXTURE_DATA, 48, 1);
     const material = new THREE.ShaderMaterial({
       uniforms: {
-        map: { value: guideTexture },
-        color: { value: this.options.color },
-        time: { value: 0.0 },
+        map: {
+          value: guideTexture
+        },
+        color: {
+          value: this.options.color
+        },
+        time: {
+          value: 0.0
+        },
       },
 
       transparent: true,
@@ -444,16 +462,16 @@ export class XRTeleportGuide extends THREE.Group {
     // raycast against the nave meshes at each step. If we collide with any
     // nav mesh geometry we'll terminate the guide at that point.
     const traceSegments = this.options.raySegments / 2;
-    const segmentT = this.guideCurve.time/traceSegments;
+    const segmentT = this.guideCurve.time / traceSegments;
 
-    const vert = TMP_VEC.set(0,0,0);
-    const vert2 = TMP_VEC_2.set(0,0,0);
-    const dir = TMP_VEC_D.set(0,0,-1);
+    const vert = TMP_VEC.set(0, 0, 0);
+    const vert2 = TMP_VEC_2.set(0, 0, 0);
+    const dir = TMP_VEC_D.set(0, 0, -1);
 
     this.guideCurve.guidePointAtTime(vert, 0);
 
     for (let i = 1; i <= traceSegments; i++) {
-      this.guideCurve.guidePointAtTime(vert2, i*segmentT);
+      this.guideCurve.guidePointAtTime(vert2, i * segmentT);
 
       // Get the direction between the two vectors
       dir.subVectors(vert2, vert);
@@ -476,7 +494,7 @@ export class XRTeleportGuide extends THREE.Group {
 
           // Adjust the curve's flight time to terminate at the intersection point, then let the
           // rest of the algorithm do it's thing!
-          this.guideCurve.time = ((i-1)*segmentT) + (segmentT * (intersection.distance/segmentLength));
+          this.guideCurve.time = ((i - 1) * segmentT) + (segmentT * (intersection.distance / segmentLength));
 
           // Only consider it a valid teleport destination if the normal of the intersection point
           // is at least a tiny bit horizontal and facing upward.
@@ -501,23 +519,23 @@ export class XRTeleportGuide extends THREE.Group {
     // TODO: Could avoid an array allocation here by updating geometry.attributes.position.array
     // directly.
     const guidePositions = [];
-    const vert = TMP_VEC.set(0,0,0);
+    const vert = TMP_VEC.set(0, 0, 0);
     for (let i = 0; i <= segments; i++) {
       // Set vertex to current position of the virtual ball at time t
-      this.guideCurve.getPoint(i/segments, vert);
+      this.guideCurve.getPoint(i / segments, vert);
       this.worldToLocal(vert);
 
       // Get the normal and binormal of the point. This is so the cross sections
       // don't get "squished" as you rotate the guideline around.
-      const n = frames.normals[ i ];
-      const b = frames.binormals[ i ];
+      const n = frames.normals[i];
+      const b = frames.binormals[i];
 
       guidePositions.push(
-        vert.x + r*n.x, vert.y + r*n.y, vert.z + r*n.z,
-        vert.x - r*n.x, vert.y - r*n.y, vert.z - r*n.z,
+        vert.x + r * n.x, vert.y + r * n.y, vert.z + r * n.z,
+        vert.x - r * n.x, vert.y - r * n.y, vert.z - r * n.z,
 
-        vert.x + r*b.x, vert.y + r*b.y, vert.z + r*b.z,
-        vert.x - r*b.x, vert.y - r*b.y, vert.z - r*b.z);
+        vert.x + r * b.x, vert.y + r * b.y, vert.z + r * b.z,
+        vert.x - r * b.x, vert.y - r * b.y, vert.z - r * b.z);
     }
 
     const geometry = this.guidelineMesh.geometry;
@@ -533,7 +551,7 @@ export class XRTeleportGuide extends THREE.Group {
     // Controller start position
     const p = controller.getWorldPosition(this.guideCurve.origin);
     // Adjusted for a static ground height
-    const pGround = p.y - (useNavMeshes ? -(this.options.maxFallDistance+0.1) : this.options.groundHeight);
+    const pGround = p.y - (useNavMeshes ? -(this.options.maxFallDistance + 0.1) : this.options.groundHeight);
 
     // Set guide velocity to the direction of the controller, at 1m/s
     const v = controller.getWorldDirection(this.guideCurve.velocity);
@@ -551,7 +569,7 @@ export class XRTeleportGuide extends THREE.Group {
     const g = this.guideCurve.gravity;
 
     // Time for tele ball to hit ground
-    this.guideCurve.time = (-v.y + Math.sqrt(v.y**2 - 2*pGround*g.y))/g.y;
+    this.guideCurve.time = (-v.y + Math.sqrt(v.y ** 2 - 2 * pGround * g.y)) / g.y;
 
     // Clip the curve against the nav mesh if needed
     let isValid = useNavMeshes ? this.clipCurveToNavigationMesh() : true;
@@ -646,28 +664,28 @@ class XRTeleportTarget extends THREE.Group {
       this.add(new THREE.Mesh(
         targetMeshGeometry,
         new THREE.MeshBasicMaterial({
-            map: options.targetTexture,
-            blending: THREE.AdditiveBlending,
-            side: THREE.DoubleSide,
-            transparent: true,
-            depthWrite: false,
+          map: options.targetTexture,
+          blending: THREE.AdditiveBlending,
+          side: THREE.DoubleSide,
+          transparent: true,
+          depthWrite: false,
         })
       ));
       this.add(new THREE.Mesh(
         targetMeshGeometry,
         new THREE.MeshBasicMaterial({
-            map: options.targetTexture,
-            blending: THREE.AdditiveBlending,
-            side: THREE.DoubleSide,
-            transparent: true,
-            depthWrite: false,
+          map: options.targetTexture,
+          blending: THREE.AdditiveBlending,
+          side: THREE.DoubleSide,
+          transparent: true,
+          depthWrite: false,
 
-            // These two properties together allow a faded version of the target
-            // to be rendered behind any geometry that obscures it, so that the
-            // target is always fully visible but it's clear when it's behind
-            // any world geometry
-            opacity: 0.2,
-            depthFunc: THREE.GreaterDepth
+          // These two properties together allow a faded version of the target
+          // to be rendered behind any geometry that obscures it, so that the
+          // target is always fully visible but it's clear when it's behind
+          // any world geometry
+          opacity: 0.2,
+          depthFunc: THREE.GreaterDepth
         })
       ));
 
@@ -693,14 +711,14 @@ class XRTeleportTarget extends THREE.Group {
 
       if (i > 0) {
         let idx = (i * 2);
-        targetIndices.push(idx, idx-1, idx-2);
-        targetIndices.push(idx, idx+1, idx-1);
+        targetIndices.push(idx, idx - 1, idx - 2);
+        targetIndices.push(idx, idx + 1, idx - 1);
       }
     }
 
     let idx = (TARGET_SEGMENTS * 2);
-    targetIndices.push(0, idx-1, idx-2);
-    targetIndices.push(0, 1, idx-1);
+    targetIndices.push(0, idx - 1, idx - 2);
+    targetIndices.push(0, 1, idx - 1);
 
     let geometry = new THREE.BufferGeometry();
     geometry.setIndex(targetIndices);
@@ -726,8 +744,12 @@ class XRTeleportTarget extends THREE.Group {
 
     this.add(new THREE.Mesh(geometry, new THREE.ShaderMaterial({
       uniforms: {
-        cursorColor: { value: options.color },
-        opacity: { value: 1.0 }
+        cursorColor: {
+          value: options.color
+        },
+        opacity: {
+          value: 1.0
+        }
       },
       vertexShader,
       fragmentShader,
@@ -740,8 +762,12 @@ class XRTeleportTarget extends THREE.Group {
 
     this.add(new THREE.Mesh(geometry, new THREE.ShaderMaterial({
       uniforms: {
-        cursorColor: { value: options.color },
-        opacity: { value: 0.2 }
+        cursorColor: {
+          value: options.color
+        },
+        opacity: {
+          value: 0.2
+        }
       },
       vertexShader,
       fragmentShader,

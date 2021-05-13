@@ -1,28 +1,4 @@
-// Copyright 2019 Brandon Jones
-//
-// Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this software and associated documentation files (the "Software"), to deal
-// in the Software without restriction, including without limitation the rights
-// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-// copies of the Software, and to permit persons to whom the Software is
-// furnished to do so, subject to the following conditions:
-
-// The above copyright notice and this permission notice shall be included in
-// all copies or substantial portions of the Software.
-
-// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-// SOFTWARE.
-
 import * as THREE from './third-party/three.js/build/three.module.js';
-
-const PLATFORM_SPEED = 0.5; // Meters/second
-const MAX_PLATFORM_HEIGHT = 5;
-const PLATFORM_MOVE_INCREMENT = MAX_PLATFORM_HEIGHT / 2;
 
 export class PenEnvironment extends THREE.Group
 {
@@ -35,30 +11,28 @@ export class PenEnvironment extends THREE.Group
 
     this._navigationMeshes = [];
 
-    //this._platformTargetHeight = 0;
-
     this._loadedPromise = new Promise((resolve) =>
     {
       gltfLoader.setPath('media/models/environment/');
       gltfLoader.load('compressed-optimized.glb', (gltf) =>
       {
-        gltf.scene.updateMatrixWorld();
-
-        //let raisedPlatform = null;
+        // make the world static for performance
+        //gltf.matrixAutoUpdate  = false;
+        //gltf.scene.updateMatrixWorld();
 
         gltf.scene.traverse((child) =>
         {
           if (child.isMesh)
           {
-            child.position.set(2,0,-5);
-            //child.scale.set(2.25,2.25,2.25);
+            //child.position.set(0,0,0);
+            //child.scale.set(0.1,0.1,0.1);
 
             child.receiveShadow = true;
 
             // Replace the MeshStandardMaterial for the pen with something cheaper
             // to render, because we don't have proper physical materials for this
             // model.
-
+            /*
             let newMaterial = new THREE.MeshLambertMaterial({
               map: child.material.map,
               alphaMap: child.material.alphaMap,
@@ -66,9 +40,9 @@ export class PenEnvironment extends THREE.Group
               side: child.material.side,
             });
             newMaterial.shininess = 66;
-            newMaterial.metalness = 0.88; 
+            newMaterial.metalness = 0.88;
             child.material = newMaterial;
-
+            */
 
           }
           /*
@@ -81,15 +55,8 @@ export class PenEnvironment extends THREE.Group
           }
           */
         });
-        /*
-        if (raisedPlatform) {
-          let raisedPlatformTransform = raisedPlatform.parent.matrixWorld;
-          raisedPlatform.parent.remove(raisedPlatform);
-          raisedPlatform.applyMatrix4(raisedPlatformTransform);
-          this._platform.add(raisedPlatform);
-        }
-        */
 
+        gltf.scene.position.set(-5,-3.65,-3);
         this.add(gltf.scene);
         resolve(this);
       });
@@ -100,56 +67,7 @@ export class PenEnvironment extends THREE.Group
     return this._loadedPromise;
   }
 
-  get platform() {
-    return this._platform;
-  }
-
   get navigationMeshes() {
     return this._navigationMeshes;
-  }
-
-  get platformHeight() {
-    return this._platform.position.y;
-  }
-
-  raisePlatform() {
-    if (this._platform.position.y < this._platformTargetHeight) {
-      return;
-    }
-    this._platformTargetHeight += PLATFORM_MOVE_INCREMENT;
-    if (this._platformTargetHeight >  MAX_PLATFORM_HEIGHT) {
-      this._platformTargetHeight = MAX_PLATFORM_HEIGHT;
-    }
-  }
-
-  lowerPlatform() {
-    if (this._platform.position.y > this._platformTargetHeight) {
-      return;
-    }
-    this._platformTargetHeight -= PLATFORM_MOVE_INCREMENT;
-    if (this._platformTargetHeight < 0) {
-      this._platformTargetHeight = 0;
-    }
-  }
-
-  resetPlatform() {
-    this._platformTargetHeight = 0;
-    this._platform.position.y = 0;
-  }
-
-  update(delta)
-  {
-    // Update the platform height if needed
-    if (this._platform.position.y < this._platformTargetHeight) {
-      this._platform.position.y += PLATFORM_SPEED * delta;
-      if (this._platform.position.y > this._platformTargetHeight) {
-        this._platform.position.y = this._platformTargetHeight;
-      }
-    } else if (this._platform.position.y > this._platformTargetHeight) {
-      this._platform.position.y -= PLATFORM_SPEED * delta;
-      if (this._platform.position.y < this._platformTargetHeight) {
-        this._platform.position.y = this._platformTargetHeight;
-      }
-    }
   }
 }

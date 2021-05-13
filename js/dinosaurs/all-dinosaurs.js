@@ -25,6 +25,9 @@ export class Robot_0 extends XRDinosaur
       ,"3   "
       ,"<Animation>bounce"
       ,"4   "
+      ,'I can also move! ' + EMOJI.racingCarEmoji
+      ,"<Move>0,0,0,2"
+      ,"<Move>0,0,-5,2"
       ,"The End"
     );
     this.namePlateY = 2.3;
